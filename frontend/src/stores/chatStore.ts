@@ -1,0 +1,66 @@
+import { create } from 'zustand';
+import type { Message, Settings } from '../types';
+
+interface ChatState {
+  messages: Message[];
+  settings: Settings;
+  isConnected: boolean;
+  isTranscribing: boolean;
+  isGenerating: boolean;
+  sessionId: string | null;
+  showSettings: boolean;
+  selectedContextFiles: string[];
+  addMessage: (msg: Omit<Message, 'id'> & { id?: string }) => void;
+  updateMessage: (id: string, updates: Partial<Message>) => void;
+  setSettings: (settings: Partial<Settings>) => void;
+  setConnectionStatus: (status: boolean) => void;
+  setTranscribingStatus: (status: boolean) => void;
+  setGeneratingStatus: (status: boolean) => void;
+  setSessionId: (id: string | null) => void;
+  setShowSettings: (show: boolean) => void;
+  clearMessages: () => void;
+  toggleContextFile: (filename: string) => void;
+  selectAllContextFiles: (filenames: string[]) => void;
+}
+
+export const useChatStore = create<ChatState>((set) => ({
+  messages: [],
+  settings: {
+    model: 'small',
+    language: 'it',
+    device: 'auto',
+    computeType: 'auto',
+    beamSize: 2,
+  },
+  isConnected: false,
+  isTranscribing: false,
+  isGenerating: false,
+  sessionId: null,
+  showSettings: false,
+  selectedContextFiles: [],
+
+  addMessage: (msg) => set((state) => ({
+    messages: [...state.messages, { ...msg, id: msg.id || Math.random().toString(36).substring(7) }]
+  })),
+
+  updateMessage: (id, updates) => set((state) => ({
+    messages: state.messages.map((m) => m.id === id ? { ...m, ...updates } : m)
+  })),
+
+  setSettings: (newSettings) => set((state) => ({
+    settings: { ...state.settings, ...newSettings }
+  })),
+
+  setConnectionStatus: (status) => set({ isConnected: status }),
+  setTranscribingStatus: (status) => set({ isTranscribing: status }),
+  setGeneratingStatus: (status) => set({ isGenerating: status }),
+  setSessionId: (id) => set({ sessionId: id, selectedContextFiles: [] }),
+  setShowSettings: (show) => set({ showSettings: show }),
+  clearMessages: () => set({ messages: [], selectedContextFiles: [] }),
+  toggleContextFile: (filename) => set((state) => ({
+    selectedContextFiles: state.selectedContextFiles.includes(filename)
+      ? state.selectedContextFiles.filter(f => f !== filename)
+      : [...state.selectedContextFiles, filename]
+  })),
+  selectAllContextFiles: (filenames) => set({ selectedContextFiles: filenames }),
+}));

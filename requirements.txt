@@ -1,2 +1,15 @@
 faster-whisper
+torch
 tqdm
+fastapi
+uvicorn[standard]
+platformdirs
+pydantic
+pydantic-settings
+python-multipart
+pywebview
+pystray
+Pillow
+PyQt6
+llama-cpp-python
+huggingface-hub
