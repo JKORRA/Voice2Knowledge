@@ -19,12 +19,6 @@ class LectureTranscriber:
         )
         self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
 
-    def format_timestamp(self, seconds):
-        hours = int(seconds // 3600)
-        minutes = int((seconds % 3600) // 60)
-        secs = seconds % 60
-        return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
-
     def transcribe(
         self, audio_path: str, output_dir: str, language: str = "it", beam_size: int = 2
     ):
@@ -34,7 +28,6 @@ class LectureTranscriber:
 
         base_name = audio_path_obj.stem
         clean_txt_path = output_path_obj / f"{base_name}_clean.txt"
-        timed_vtt_path = output_path_obj / f"{base_name}_timed.vtt"
 
         logging.info(f"Starting transcription for: {audio_path_obj.name}")
         start_time = time.time()
@@ -65,14 +58,7 @@ class LectureTranscriber:
         pbar.n = 0
         pbar.refresh()
 
-        last_flush_time = 0.0
-
-        with (
-            open(clean_txt_path, "w", encoding="utf-8") as f_clean,
-            open(timed_vtt_path, "w", encoding="utf-8") as f_timed,
-        ):
-            f_timed.write("WEBVTT\n\n")
-
+        with open(clean_txt_path, "w", encoding="utf-8") as f_clean:
             for segment in segments:
                 text = segment.text.strip()
                 if not text:
@@ -80,28 +66,17 @@ class LectureTranscriber:
 
                 f_clean.write(f"{text} ")
 
-                start_formatted = self.format_timestamp(segment.start)
-                end_formatted = self.format_timestamp(segment.end)
-
-                f_timed.write(f"{start_formatted} --> {end_formatted}\n")
-                f_timed.write(f"{text}\n\n")
-
                 delta = segment.end - pbar.n
                 if delta > 0:
                     pbar.update(delta)
-
-                if segment.end - last_flush_time >= 30:
-                    f_clean.flush()
-                    f_timed.flush()
-                    last_flush_time = segment.end
 
         pbar.close()
 
         elapsed = time.time() - start_time
         logging.info(f"Transcription complete in {elapsed / 60:.2f} minutes.")
-        logging.info(f"Outputs saved to:\n  - {clean_txt_path}\n  - {timed_vtt_path}")
+        logging.info(f"Output saved to:\n  - {clean_txt_path}")
 
-        return str(clean_txt_path), str(timed_vtt_path)
+        return str(clean_txt_path)
 
 
 def gather_audio_files(args):

@@ -1,14 +1,18 @@
 import { motion } from 'framer-motion';
-import { Bot, User, Copy, Check } from 'lucide-react';
+import { Bot, User, Copy, Check, FileAudio } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 
 interface ChatMessageProps {
-  content: string;
-  role: 'user' | 'assistant';
+  msg: {
+    content: string;
+    role: 'user' | 'assistant';
+    files?: { names: string[] };
+  };
 }
 
-export function ChatMessage({ content, role }: ChatMessageProps) {
+export function ChatMessage({ msg }: ChatMessageProps) {
+  const { content, role } = msg;
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -46,8 +50,22 @@ export function ChatMessage({ content, role }: ChatMessageProps) {
             : 'bg-[var(--message-assistant-bg)] text-[var(--message-assistant-foreground)] rounded-tl-sm'
         )}
       >
+        {role === 'user' && (msg.files?.names.length || 0) > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {msg.files!.names.map((name, idx) => (
+              <div key={idx} className="flex flex-col gap-1 bg-black/10 dark:bg-white/10 p-2 rounded-xl border border-black/5 dark:border-white/5 min-w-[120px] max-w-[200px]">
+                <span className="text-xs font-semibold truncate" title={name}>{name}</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <FileAudio size={12} className="opacity-70" />
+                  <span className="text-[10px] uppercase font-bold opacity-70">Audio</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed font-normal">
-          {content}
+          {msg.content}
         </pre>
 
         {role === 'assistant' && (

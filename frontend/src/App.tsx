@@ -36,6 +36,7 @@ export default function App() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [showChatInput, setShowChatInput] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<{ paths: string[], names: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -68,15 +69,10 @@ export default function App() {
       const data = await res.json();
       setSessionId(data.session_id);
 
-      addMessage({
-        role: 'user',
-        content: `Transcribe ${files.length} file(s):\n${Array.from(files).map(f => f.name).join(', ')}`,
-        type: 'text'
+      setPendingFiles({
+        paths: data.files,
+        names: Array.from(files).map(f => f.name)
       });
-
-      setTimeout(() => {
-        sendFiles(data.files);
-      }, 500);
 
     } catch (err) {
       console.error(err);
@@ -90,6 +86,20 @@ export default function App() {
       setShowChatInput(true);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleStartTranscription = () => {
+    if (!pendingFiles) return;
+
+    addMessage({
+      role: 'user',
+      content: `Start the transcription`,
+      type: 'text',
+      files: { names: pendingFiles.names }
+    });
+
+    sendFiles(pendingFiles.paths);
+    setPendingFiles(null);
   };
 
   const handleSendQuestion = (question: string) => {
@@ -120,7 +130,6 @@ export default function App() {
             file={msg.file || ''}
             content={msg.content}
             txtPath={msg.txtPath}
-            vttPath={msg.vttPath}
           />
         );
       case 'error':
@@ -143,8 +152,7 @@ export default function App() {
         return (
           <ChatMessage
             key={msg.id}
-            content={msg.content}
-            role={msg.role as 'user' | 'assistant'}
+            msg={msg as any}
           />
         );
     }
@@ -219,7 +227,7 @@ export default function App() {
                     </>
                   )}
                 </button>
-                
+
                 {/* Bug Fix: Allow returning to chat if there are transcriptions available */}
                 {sessionId && messages.some(m => m.type === 'result') && !isTranscribing && !isUploading && (
                   <button
@@ -229,7 +237,7 @@ export default function App() {
                     Return to Chat
                   </button>
                 )}
-                
+
                 {isTranscribing && (
                   <button
                     onClick={cancelTranscription}
@@ -244,23 +252,22 @@ export default function App() {
               <div className="w-full flex flex-col items-center">
                 <ContextSelector />
                 <div className="w-full flex items-end gap-2">
-                  <button
-                    onClick={() => setShowChatInput(false)}
-                    disabled={isGenerating || isTranscribing}
-                    className={cn("shrink-0 p-4 rounded-xl border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground-secondary)] transition-colors", 
-                      (isGenerating || isTranscribing) ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--border)]")}
-                    title="Upload more files"
-                  >
-                    <Upload size={20} />
-                  </button>
-                  <div className="flex-1">
+                  <div className="flex-1 w-full">
                     <ChatInput
                       onSend={handleSendQuestion}
+                      onStartTranscription={handleStartTranscription}
+                      pendingFiles={pendingFiles}
                       onCancel={cancelGeneration}
+                      onUploadClick={() => fileInputRef.current?.click()}
                       isGenerating={isGenerating}
-                      disabled={isTranscribing || !sessionId}
+                      disabled={isTranscribing || (!sessionId && !pendingFiles)}
                     />
                   </div>
+                </div>
+                <div className="flex items-center gap-4 mt-3 text-xs font-medium text-[var(--foreground-tertiary)]">
+                  <span>Transcription Model: Whisper {settings.model}</span>
+                  <span>•</span>
+                  <span>Chat Model: {settings.chatModel === 'qwen2.5-3b' ? 'Qwen 2.5 3B' : settings.chatModel === 'llama-3.2-1b' ? 'Llama 3.2 1B' : 'Phi 3.5 Mini'}</span>
                 </div>
               </div>
             )}

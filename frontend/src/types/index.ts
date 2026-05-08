@@ -9,12 +9,12 @@ export interface Message {
   file?: string;
   percent?: number;
   txtPath?: string;
-  vttPath?: string;
+  files?: { names: string[] };
 }
 
 export interface Settings {
   model: string;
-  language: string;
+  chatModel: string;
   device: string;
   computeType: string;
   beamSize: number;

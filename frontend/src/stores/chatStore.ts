@@ -27,7 +27,7 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   settings: {
     model: 'small',
-    language: 'it',
+    chatModel: 'qwen2.5-3b',
     device: 'auto',
     computeType: 'auto',
     beamSize: 2,

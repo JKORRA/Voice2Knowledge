@@ -64,6 +64,5 @@ yarn-error.log*
 # Project Specific
 # ===============================
 transcriptions/
-*.vtt
 *.txt
 huggingface/

@@ -21,6 +21,5 @@ python script.py "audio.wav" -m small -l it -o output_folder --beam-size 2
 - `--beam-size` : Beam size for transcription search. Lower is faster. Default is `2`.
 
 ## Output Files
-For every audio file processed, the script will generate two files in the output directory:
-1. `[filename]_clean.txt`: Pure text without timestamps, perfectly formatted for handing off to a Summarization AI.
-2. `[filename]_timed.vtt`: Standard WebVTT subtitle format containing exact timestamps mapping to the audio.
+For every audio file processed, the script will generate one file in the output directory:
+- `[filename]_clean.txt`: Pure text without timestamps, ready for reading or processing.

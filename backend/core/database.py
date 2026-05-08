@@ -22,7 +22,6 @@ class Database:
                 filename TEXT NOT NULL,
                 file_path TEXT NOT NULL,
                 text_content TEXT,
-                vtt_path TEXT,
                 model_size TEXT,
                 language TEXT,
                 device TEXT,
@@ -43,7 +42,6 @@ class Database:
         filename: str,
         file_path: str,
         text_content: Optional[str] = None,
-        vtt_path: Optional[str] = None,
         model_size: str = "small",
         language: str = "auto",
         device: str = "cpu",
@@ -54,15 +52,14 @@ class Database:
         cursor = conn.execute(
             """
             INSERT INTO transcriptions 
-            (session_id, filename, file_path, text_content, vtt_path, model_size, language, device, duration_seconds, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (session_id, filename, file_path, text_content, model_size, language, device, duration_seconds, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 session_id,
                 filename,
                 file_path,
                 text_content,
-                vtt_path,
                 model_size,
                 language,
                 device,

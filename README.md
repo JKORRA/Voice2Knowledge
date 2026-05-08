@@ -37,7 +37,7 @@ Voice2Knowledge is a desktop application that transcribes audio files (work call
 |---------|-------------|
 | **Audio Transcription** | Supports WAV, MP3, M4A, FLAC, OGG, WebM, MP4 formats |
 | **Batch Processing** | Transcribe multiple files in one session |
-| **Dual Output** | Generates clean text (.txt) and timestamped subtitles (.vtt) |
+| **Text Output** | Generates clean text (.txt) file for easy reading and processing |
 | **Hardware Auto-Detection** | Automatically detects and uses GPU (CUDA) when available |
 | **Language Detection** | Automatically detects audio language with confidence score |
 

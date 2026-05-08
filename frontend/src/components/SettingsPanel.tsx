@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Cpu, HardDrive, Globe, Sparkles } from 'lucide-react';
+import { X, Settings, Cpu, HardDrive, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { Settings as SettingsType } from '../types';
 
@@ -17,6 +17,12 @@ const modelOptions = [
   { value: 'small', label: 'Small', description: 'Recommended (default)' },
   { value: 'medium', label: 'Medium', description: 'More accurate' },
   { value: 'large-v3', label: 'Large v3', description: 'Most accurate, slowest' },
+];
+
+const chatModelOptions = [
+  { value: 'qwen2.5-3b', label: 'Qwen 2.5 3B', description: 'Tiny, Smart, Fast' },
+  { value: 'llama-3.2-1b', label: 'Llama 3.2 1B', description: 'Small, Fast' },
+  { value: 'phi-3.5-mini', label: 'Phi 3.5 Mini', description: 'Balanced' },
 ];
 
 const deviceOptions = [
@@ -68,7 +74,7 @@ export function SettingsPanel({
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                   <Sparkles size={16} className="text-[var(--accent)]" />
-                  Model
+                  Transcription Model (Whisper)
                 </div>
                 <select
                   value={settings.model}
@@ -87,26 +93,28 @@ export function SettingsPanel({
                   ))}
                 </select>
               </div>
-
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
-                  <Globe size={16} className="text-[var(--accent)]" />
-                  Language
+                  <Sparkles size={16} className="text-[var(--accent)]" />
+                  Chat Model (Generative AI)
                 </div>
-                <input
-                  type="text"
-                  value={settings.language}
-                  onChange={(e) => onSettingsChange({ language: e.target.value })}
+                <select
+                  value={settings.chatModel}
+                  onChange={(e) => onSettingsChange({ chatModel: e.target.value })}
                   disabled={isDisabled}
-                  placeholder="e.g., it, en (auto if empty)"
                   className={cn(
                     'w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground)] text-sm',
                     'focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-colors',
                     'disabled:opacity-50 disabled:cursor-not-allowed'
                   )}
-                />
+                >
+                  {chatModelOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} - {opt.description}
+                    </option>
+                  ))}
+                </select>
               </div>
-
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                   <Cpu size={16} className="text-[var(--accent)]" />

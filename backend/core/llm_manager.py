@@ -9,14 +9,19 @@ from backend.core.config import settings, APP_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
+LLM_MODELS = {
+    "qwen2.5-3b": {"repo_id": "Qwen/Qwen2.5-3B-Instruct-GGUF", "filename": "qwen2.5-3b-instruct-q4_k_m.gguf"},
+    "llama-3.2-1b": {"repo_id": "bartowski/Llama-3.2-1B-Instruct-GGUF", "filename": "Llama-3.2-1B-Instruct-Q4_K_M.gguf"},
+    "phi-3.5-mini": {"repo_id": "bartowski/Phi-3.5-mini-instruct-GGUF", "filename": "Phi-3.5-mini-instruct-Q4_K_M.gguf"},
+}
+
 class LLMManager:
     def __init__(self):
         self._lock = asyncio.Lock()
         self._model = None
-        # Use a safe default modern GGUF. We use Qwen2.5-3B as it's the current state of the art tiny model.
-        # It's ~2.3GB and runs perfectly on 8GB machines.
-        self.repo_id = "Qwen/Qwen2.5-3B-Instruct-GGUF"
-        self.filename = "qwen2.5-3b-instruct-q4_k_m.gguf"
+        self.current_model_id = "qwen2.5-3b"
+        self.repo_id = LLM_MODELS[self.current_model_id]["repo_id"]
+        self.filename = LLM_MODELS[self.current_model_id]["filename"]
         
     def is_model_downloaded(self) -> bool:
         """Check if the GGUF model is cached."""
@@ -100,9 +105,26 @@ class LLMManager:
                 except ImportError:
                     pass
 
-    async def generate_stream(self, system_prompt: str, user_prompt: str, cancel_event: threading.Event):
+    async def generate_stream(self, system_prompt: str, user_prompt: str, cancel_event: threading.Event, chat_model: str = "qwen2.5-3b"):
         """Generate response via streaming."""
         async with self._lock:
+            if chat_model and chat_model != self.current_model_id:
+                if self._model is not None:
+                    logger.info("Unloading current LLM from memory to switch models...")
+                    self._model = None
+                    gc.collect()
+                    try:
+                        import torch
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                    except ImportError:
+                        pass
+                
+                self.current_model_id = chat_model
+                model_info = LLM_MODELS.get(chat_model, LLM_MODELS["qwen2.5-3b"])
+                self.repo_id = model_info["repo_id"]
+                self.filename = model_info["filename"]
+
             if self._model is None:
                 await asyncio.to_thread(self._load_model)
 

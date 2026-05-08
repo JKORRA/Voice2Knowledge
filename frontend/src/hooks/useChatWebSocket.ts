@@ -60,6 +60,7 @@ export const useChatWebSocket = (sessionId: string | null) => {
           case 'error':
             setGeneratingStatus(false);
             currentMessageId.current = null;
+            if (data.message === "System is currently transcribing. Please wait.") return;
             addMessage({
               role: 'assistant',
               type: 'error',
@@ -95,11 +96,12 @@ export const useChatWebSocket = (sessionId: string | null) => {
     // Give it a tiny bit of time to connect if it was closed
     setTimeout(() => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            const { selectedContextFiles } = useChatStore.getState();
+            const { selectedContextFiles, settings } = useChatStore.getState();
             setGeneratingStatus(true);
             ws.current.send(JSON.stringify({ 
               question,
-              selected_files: selectedContextFiles
+              selected_files: selectedContextFiles,
+              chat_model: settings.chatModel
             }));
         } else {
             addMessage({

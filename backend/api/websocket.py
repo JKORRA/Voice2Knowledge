@@ -72,7 +72,9 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
         data = await websocket.receive_json()
         files = data.get("files", [])
         model_size = data.get("model", settings.default_model)
-        language = data.get("language", settings.default_language)
+        language = data.get("language")
+        if language == "auto" or not language:
+            language = None
         device = data.get("device", settings.default_device)
         compute_type = data.get("compute_type", settings.default_compute_type)
         beam_size = data.get("beam_size", settings.default_beam_size)
@@ -139,7 +141,7 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
                 })
 
             try:
-                clean_txt, timed_vtt, metadata = await transcriber_instance.transcribe(
+                clean_txt, metadata = await transcriber_instance.transcribe(
                     audio_path=file_path,
                     output_dir=str(settings.output_dir),
                     model_size=model_size,
@@ -165,7 +167,7 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
                     "file": file_path
                 })
             else:
-                if clean_txt and timed_vtt:
+                if clean_txt:
                     try:
                         with open(clean_txt, "r", encoding="utf-8") as f:
                             text_content = f.read()
@@ -176,7 +178,6 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
                             filename=Path(file_path).name,
                             file_path=file_path,
                             text_content=text_content,
-                            vtt_path=timed_vtt,
                             model_size=model_size,
                             language=metadata.get("language", language) if metadata else language,
                             device=actual_device,
@@ -187,8 +188,7 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
                             "type": "result",
                             "file": file_path,
                             "text": text_content,
-                            "txt_path": clean_txt,
-                            "vtt_path": timed_vtt
+                            "txt_path": clean_txt
                         })
                     except Exception as e:
                         logger.error(f"Error reading transcription output: {e}")
@@ -245,6 +245,7 @@ async def chat_ws(websocket: WebSocket, session_id: str):
         data = await websocket.receive_json()
         question = data.get("question", "")
         selected_files = data.get("selected_files", [])
+        chat_model = data.get("chat_model", "qwen2.5-3b")
 
         # Let's filter manually if DB method doesn't support session_id exactly
         all_trans = db.get_transcriptions(limit=100)
@@ -272,7 +273,7 @@ Context:
         await websocket.send_json({"type": "status", "message": "Thinking..."})
 
         # Generate stream
-        async for token in llm_manager.generate_stream(system_prompt, question, cancel_event):
+        async for token in llm_manager.generate_stream(system_prompt, question, cancel_event, chat_model):
             await websocket.send_json({"type": "token", "content": token})
             # Also listen for stop commands without blocking
             try:

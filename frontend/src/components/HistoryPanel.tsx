@@ -9,7 +9,6 @@ interface Transcription {
   filename: string;
   file_path: string;
   text_content: string;
-  vtt_path: string;
   model_size: string;
   language: string;
   device: string;

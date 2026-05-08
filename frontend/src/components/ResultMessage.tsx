@@ -1,15 +1,14 @@
 import { motion } from 'framer-motion';
-import { Bot, FileText, Subtitles, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bot, FileText, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 
 interface ResultMessageProps {
   file: string;
   content: string;
   txtPath?: string;
-  vttPath?: string;
 }
 
-export function ResultMessage({ file, content, txtPath, vttPath }: ResultMessageProps) {
+export function ResultMessage({ file, content, txtPath }: ResultMessageProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -82,15 +81,6 @@ export function ResultMessage({ file, content, txtPath, vttPath }: ResultMessage
             >
               <FileText size={14} />
               Text
-            </button>
-          )}
-          {vttPath && (
-            <button
-              onClick={() => handleDownload(vttPath)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
-            >
-              <Subtitles size={14} />
-              Subtitles
             </button>
           )}
         </div>

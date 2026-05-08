@@ -24,7 +24,7 @@ class LectureTranscriber:
         self,
         audio_path: str,
         output_dir: str,
-        language: str = "it",
+        language: str = None,
         beam_size: int = 2,
         progress_callback=None,
         cancel_event=None
@@ -35,7 +35,6 @@ class LectureTranscriber:
 
         base_name = audio_path_obj.stem
         clean_txt_path = output_path_obj / f"{base_name}_clean.txt"
-        timed_vtt_path = output_path_obj / f"{base_name}_timed.vtt"
 
         logger.info(f"Starting transcription for: {audio_path_obj.name}")
         start_time = time.time()
@@ -48,18 +47,12 @@ class LectureTranscriber:
             vad_parameters=dict(min_silence_duration_ms=1000),
         )
 
-        logger.info(
-            f"Detected language '{info.language}' (Probability: {info.language_probability:.2f})"
-        )
+
 
         last_flush_time = 0.0
         processed_seconds = 0.0
 
-        with (
-            open(clean_txt_path, "w", encoding="utf-8") as f_clean,
-            open(timed_vtt_path, "w", encoding="utf-8") as f_timed,
-        ):
-            f_timed.write("WEBVTT\n\n")
+        with open(clean_txt_path, "w", encoding="utf-8") as f_clean:
 
             for segment in segments:
                 # Check for cancellation
@@ -73,12 +66,6 @@ class LectureTranscriber:
 
                 f_clean.write(f"{text} ")
 
-                start_formatted = self.format_timestamp(segment.start)
-                end_formatted = self.format_timestamp(segment.end)
-
-                f_timed.write(f"{start_formatted} --> {end_formatted}\n")
-                f_timed.write(f"{text}\n\n")
-
                 # Update progress
                 processed_seconds = segment.end
                 if progress_callback and info.duration > 0:
@@ -88,12 +75,11 @@ class LectureTranscriber:
                 # Periodic flush
                 if segment.end - last_flush_time >= 30:
                     f_clean.flush()
-                    f_timed.flush()
                     last_flush_time = segment.end
 
         # If cancelled, we might want to return a specific flag or just paths
         if cancel_event and cancel_event.is_set():
-            return None, None, None
+            return None, None
 
         elapsed = time.time() - start_time
         logger.info(f"Transcription complete in {elapsed / 60:.2f} minutes.")
@@ -104,7 +90,7 @@ class LectureTranscriber:
             "language_probability": info.language_probability if hasattr(info, 'language_probability') else None,
         }
 
-        return str(clean_txt_path), str(timed_vtt_path), metadata
+        return str(clean_txt_path), metadata
 
 
 class TranscriberWrapper:

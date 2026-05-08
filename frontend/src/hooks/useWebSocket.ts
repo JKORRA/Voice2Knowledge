@@ -68,8 +68,7 @@ export const useWebSocket = (sessionId: string | null) => {
                     type: 'result' as const,
                     content: data.text,
                     isStreaming: false,
-                    txtPath: data.txt_path,
-                    vttPath: data.vtt_path
+                    txtPath: data.txt_path
                   };
                 }
                 return m;
