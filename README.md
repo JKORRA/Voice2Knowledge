@@ -10,14 +10,16 @@ You **do not** need any technical knowledge, coding experience, or command-line 
 
 ### 🪟 Windows
 1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest).
-2. Download the `Voice2Knowledge-Windows.zip` file.
-3. Extract (unzip) the file.
-4. Open the extracted folder and double-click `Voice2Knowledge.exe`.
+2. Scroll down to the **Assets** section at the bottom of the release notes.
+3. Download the `Voice2Knowledge-Windows.zip` file (do **not** download the "Source code").
+4. Extract (unzip) the file.
+5. Open the extracted folder and double-click `Voice2Knowledge.exe`.
 
 ### 🍎 macOS
 1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest).
-2. Download the `Voice2Knowledge-macOS.zip` file.
-3. Extract (unzip) the file.
+2. Scroll down to the **Assets** section at the bottom of the release notes.
+3. Download the `Voice2Knowledge-macOS.zip` file (do **not** download the "Source code").
+4. Extract (unzip) the file.
 4. **Important Security Step**: The first time you open the app, macOS will show a warning saying it cannot verify the developer. To bypass this:
    - **Right-click** (or Control-click) on the `Voice2Knowledge` app.
    - Click **Open** from the menu.
@@ -25,8 +27,9 @@ You **do not** need any technical knowledge, coding experience, or command-line 
 
 ### 🐧 Linux
 1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest).
-2. Download the `Voice2Knowledge-Linux.tar.gz` file.
-3. Extract the archive.
+2. Scroll down to the **Assets** section at the bottom of the release notes.
+3. Download the `Voice2Knowledge-Linux.tar.gz` file (do **not** download the "Source code").
+4. Extract the archive.
 4. Right-click the `Voice2Knowledge` file inside the folder, select **Properties**, go to **Permissions**, and check **"Allow executing file as program"**.
 5. Double-click the file to run it.
 
