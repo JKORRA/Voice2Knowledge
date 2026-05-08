@@ -20,20 +20,18 @@ active_sessions: Dict[str, threading.Event] = {}
 def get_device_info():
     """Determine device and compute type with error handling."""
     try:
-        import torch
-        cuda_available = torch.cuda.is_available()
-        cuda_device_name = torch.cuda.get_device_name(0) if cuda_available else None
+        from backend.core.gpu_utils import is_cuda_available, get_cuda_device_name
+        cuda_available = is_cuda_available()
+        cuda_device_name = get_cuda_device_name() if cuda_available else None
         return {
             "cuda_available": cuda_available,
             "cuda_device_name": cuda_device_name,
-            "torch_version": torch.__version__,
         }
     except Exception as e:
         logger.warning(f"Could not detect GPU: {e}")
         return {
             "cuda_available": False,
             "cuda_device_name": None,
-            "torch_version": "unknown",
             "error": str(e)
         }
 

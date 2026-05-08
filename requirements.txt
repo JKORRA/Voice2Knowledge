@@ -1,5 +1,4 @@
 faster-whisper
-torch
 tqdm
 fastapi
 uvicorn[standard]

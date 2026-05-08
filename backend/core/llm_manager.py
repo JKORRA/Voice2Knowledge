@@ -69,14 +69,14 @@ class LLMManager:
             
         from huggingface_hub import hf_hub_download
         from llama_cpp import Llama
-        import torch
+        from backend.core.gpu_utils import is_cuda_available
 
         # Force download/get path
         model_path = hf_hub_download(repo_id=self.repo_id, filename=self.filename)
         
         # Check for GPU
         n_gpu_layers = 0
-        if torch.cuda.is_available():
+        if is_cuda_available():
             logger.info("CUDA detected. Enabling GPU offloading for LLM.")
             n_gpu_layers = -1  # Offload all layers to GPU
             
@@ -99,10 +99,9 @@ class LLMManager:
                 self._model = None
                 gc.collect()
                 try:
-                    import torch
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-                except ImportError:
+                    from backend.core.gpu_utils import clear_cuda_cache
+                    clear_cuda_cache()
+                except Exception:
                     pass
 
     async def generate_stream(self, system_prompt: str, user_prompt: str, cancel_event: threading.Event, chat_model: str = "qwen2.5-3b"):
@@ -114,10 +113,9 @@ class LLMManager:
                     self._model = None
                     gc.collect()
                     try:
-                        import torch
-                        if torch.cuda.is_available():
-                            torch.cuda.empty_cache()
-                    except ImportError:
+                        from backend.core.gpu_utils import clear_cuda_cache
+                        clear_cuda_cache()
+                    except Exception:
                         pass
                 
                 self.current_model_id = chat_model

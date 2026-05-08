@@ -1,11 +1,14 @@
 import os
+import sys
 import argparse
 import logging
 import time
 from pathlib import Path
-import torch
 from faster_whisper import WhisperModel
 from tqdm import tqdm
+
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -138,7 +141,8 @@ def main():
     args = parser.parse_args()
 
     if args.device == "auto":
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        from backend.core.gpu_utils import is_cuda_available
+        device = "cuda" if is_cuda_available() else "cpu"
     else:
         device = args.device
 

@@ -2,7 +2,6 @@ import time
 import logging
 import asyncio
 from pathlib import Path
-import torch
 from faster_whisper import WhisperModel
 
 logger = logging.getLogger(__name__)
@@ -133,10 +132,9 @@ class TranscriberWrapper:
                 import gc
                 gc.collect()
                 try:
-                    import torch
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-                except ImportError:
+                    from backend.core.gpu_utils import clear_cuda_cache
+                    clear_cuda_cache()
+                except Exception:
                     pass
 
 transcriber_instance = TranscriberWrapper()
