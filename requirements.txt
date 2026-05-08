@@ -10,6 +10,8 @@ pywebview
 pystray
 Pillow
 PyQt6
+qtpy
+PyQt6-WebEngine
 llama-cpp-python
 huggingface-hub
 imageio-ffmpeg
