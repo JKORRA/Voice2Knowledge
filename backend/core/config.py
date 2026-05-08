@@ -13,6 +13,14 @@ APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # Set HF_HOME so huggingface hub downloads models here
 os.environ["HF_HOME"] = str(APP_DATA_DIR / "huggingface")
 
+# Automate FFmpeg configuration for faster-whisper
+try:
+    import imageio_ffmpeg
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_exe)
+except ImportError:
+    pass
+
 class Settings(BaseSettings):
     default_model: str = "small"
     default_language: str = "it"

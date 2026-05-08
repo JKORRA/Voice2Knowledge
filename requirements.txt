@@ -13,3 +13,4 @@ Pillow
 PyQt6
 llama-cpp-python
 huggingface-hub
+imageio-ffmpeg

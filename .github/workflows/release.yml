@@ -1,0 +1,86 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch: # Allows manual triggering for testing
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: Voice2Knowledge
+            asset_name: Voice2Knowledge-Linux.tar.gz
+          - os: macos-latest
+            artifact_name: Voice2Knowledge
+            asset_name: Voice2Knowledge-macOS.zip
+          - os: windows-latest
+            artifact_name: Voice2Knowledge.exe
+            asset_name: Voice2Knowledge-Windows.zip
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install System Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-cursor0 qt6-base-dev
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller app.spec --clean -y
+
+      - name: Archive Release (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cd dist
+          tar -czf ${{ matrix.asset_name }} Voice2Knowledge/
+
+      - name: Archive Release (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd dist
+          zip -r ${{ matrix.asset_name }} Voice2Knowledge/
+
+      - name: Archive Release (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd dist
+          Compress-Archive -Path Voice2Knowledge -DestinationPath ${{ matrix.asset_name }}
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/${{ matrix.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
