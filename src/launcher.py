@@ -8,11 +8,12 @@ from pathlib import Path
 
 # Handle frozen (PyInstaller) vs development mode
 if getattr(sys, 'frozen', False):
-    # When frozen, reset HuggingFace cache to user directory
-    # to avoid looking inside the bundle for cached models
-    hf_home = os.path.expanduser("~/.cache/huggingface")
-    os.environ["HF_HOME"] = hf_home
-    os.environ["TRANSFORMERS_CACHE"] = hf_home
+    from pathlib import Path
+    import platformdirs
+    app_data = Path(platformdirs.user_data_dir("Voice2Knowledge", "Voice2Knowledge"))
+    hf_home = app_data / "huggingface"
+    os.environ["HF_HOME"] = str(hf_home)
+    os.environ["TRANSFORMERS_CACHE"] = str(hf_home)
     os.environ["HF_HUB_DISABLE_SYMLINKS"] = "1"
     os.environ["HF_HUB_OFFLINE"] = "0"
 else:

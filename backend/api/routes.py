@@ -1,4 +1,3 @@
-import os
 import shutil
 import uuid
 from pathlib import Path
@@ -130,8 +129,12 @@ async def get_setup_status():
         "llm_ready": llm_ready,
     }
 
-AVAILABLE_MODELS = ['tiny', 'base', 'small', 'medium', 'large-v3']
-AVAILABLE_CHAT_MODELS = ['qwen2.5-3b', 'llama-3.2-1b', 'phi-3.5-mini']
+from backend.core.model_cache_manager import (
+    AVAILABLE_MODELS,
+    AVAILABLE_CHAT_MODELS,
+    delete_cached_model,
+    get_cached_models,
+)
 
 @router.get("/models")
 async def get_models():
@@ -168,37 +171,22 @@ async def download_model(model: str = Query(..., pattern='^(tiny|base|small|medi
 
 @router.delete("/models/{model_name}")
 async def delete_model(model_name: str):
-    from backend.core.llm_manager import LLM_MODELS
-    from faster_whisper.utils import _MODELS
-    
     try:
-        model_path = Path(settings.output_dir).parent / "huggingface" / "hub"
-        if not model_path.exists():
-            return {"status": "not_found", "model": model_name}
-
-        import shutil
-        deleted = False
-
-        if model_name in _MODELS or model_name in AVAILABLE_MODELS:
-            # It's a whisper model
-            repo_id = _MODELS.get(model_name, f"Systran/faster-whisper-{model_name}")
-            dir_name = "models--" + repo_id.replace("/", "--")
-            model_dir = model_path / dir_name
-            if model_dir.exists():
-                shutil.rmtree(model_dir)
-                deleted = True
-
-        elif model_name in LLM_MODELS:
-            # It's a chat model
-            repo_id = LLM_MODELS[model_name]["repo_id"]
-            dir_name = "models--" + repo_id.replace("/", "--")
-            model_dir = model_path / dir_name
-            if model_dir.exists():
-                shutil.rmtree(model_dir)
-                deleted = True
+        if model_name in AVAILABLE_MODELS:
+            from backend.core.transcriber import transcriber_instance
+            await transcriber_instance.unload_model()
+            deleted = delete_cached_model(model_name, "transcription")
+        elif model_name in AVAILABLE_CHAT_MODELS:
+            from backend.core.llm_manager import llm_manager
+            await llm_manager.unload_model()
+            deleted = delete_cached_model(model_name, "chat")
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown model: {model_name}")
 
         if deleted:
             return {"status": "deleted", "model": model_name}
         return {"status": "not_found", "model": model_name}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
