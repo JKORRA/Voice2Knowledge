@@ -161,11 +161,21 @@ async def get_models():
     return {"models": models_status, "default": settings.default_model, "default_chat": settings.default_model}
 
 @router.post("/models/download")
-async def download_model(model: str = Query(..., pattern='^(tiny|base|small|medium|large-v3)$')):
+async def download_model(model: str = Query(...)):
     from backend.core.model_manager import model_manager
+    from backend.core.llm_manager import llm_manager
+
     try:
-        await model_manager.download_model_async(model)
-        return {"status": "downloaded", "model": model}
+        if model in AVAILABLE_MODELS:
+            await model_manager.download_model_async(model)
+            return {"status": "downloaded", "model": model, "type": "transcription"}
+        elif model in AVAILABLE_CHAT_MODELS:
+            await llm_manager.download_model_async(model)
+            return {"status": "downloaded", "model": model, "type": "chat"}
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
