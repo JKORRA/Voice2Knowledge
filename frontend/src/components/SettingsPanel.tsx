@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Cpu, HardDrive, Sparkles } from 'lucide-react';
+import { X, Settings, Cpu, HardDrive, Sparkles, Database } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { Settings as SettingsType } from '../types';
+import { DownloadConfirmModal } from './DownloadConfirmModal';
+import { ModelManager } from './ModelManager';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -11,7 +14,7 @@ interface SettingsPanelProps {
   isDisabled?: boolean;
 }
 
-const modelOptions = [
+const baseModelOptions = [
   { value: 'tiny', label: 'Tiny', description: 'Fastest, less accurate' },
   { value: 'base', label: 'Base', description: 'Balanced' },
   { value: 'small', label: 'Small', description: 'Recommended (default)' },
@@ -19,7 +22,7 @@ const modelOptions = [
   { value: 'large-v3', label: 'Large v3', description: 'Most accurate, slowest' },
 ];
 
-const chatModelOptions = [
+const baseChatModelOptions = [
   { value: 'qwen2.5-3b', label: 'Qwen 2.5 3B', description: 'Tiny, Smart, Fast' },
   { value: 'llama-3.2-1b', label: 'Llama 3.2 1B', description: 'Small, Fast' },
   { value: 'phi-3.5-mini', label: 'Phi 3.5 Mini', description: 'Balanced' },
@@ -38,8 +41,95 @@ export function SettingsPanel({
   onSettingsChange,
   isDisabled = false,
 }: SettingsPanelProps) {
+  const [modelStatuses, setModelStatuses] = useState<Record<string, boolean>>({});
+  
+  // Download Modal State
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [pendingModelDownload, setPendingModelDownload] = useState<{ name: string, type: 'whisper' | 'chat' } | null>(null);
+
+  // Model Manager State
+  const [isModelManagerOpen, setIsModelManagerOpen] = useState(false);
+
+  const fetchStatuses = () => {
+    const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? window.location.host
+      : '127.0.0.1:8000';
+      
+    fetch(`http://${host}/api/models`)
+      .then(res => res.json())
+      .then(data => {
+        const statuses: Record<string, boolean> = {};
+        data.models.forEach((m: any) => {
+          statuses[m.name] = m.downloaded;
+        });
+        setModelStatuses(statuses);
+      })
+      .catch(err => console.error("Failed to fetch model statuses", err));
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchStatuses();
+    }
+  }, [isOpen]);
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>, type: 'whisper' | 'chat') => {
+    const modelName = e.target.value;
+    if (modelStatuses[modelName]) {
+      // Already downloaded, just apply
+      if (type === 'whisper') {
+        onSettingsChange({ model: modelName });
+      } else {
+        onSettingsChange({ chatModel: modelName });
+      }
+    } else {
+      // Not downloaded, prompt user
+      setPendingModelDownload({ name: modelName, type });
+      setIsDownloadModalOpen(true);
+    }
+  };
+
+  const handleDownloadComplete = () => {
+    if (pendingModelDownload) {
+      if (pendingModelDownload.type === 'whisper') {
+        onSettingsChange({ model: pendingModelDownload.name });
+      } else {
+        onSettingsChange({ chatModel: pendingModelDownload.name });
+      }
+    }
+    fetchStatuses();
+    setIsDownloadModalOpen(false);
+    setPendingModelDownload(null);
+  };
+
+  const handleDownloadCancel = () => {
+    setIsDownloadModalOpen(false);
+    setPendingModelDownload(null);
+    // Dropdown will automatically revert because it's bound to the unmodified `settings` prop.
+  };
+
+  const modelOptions = baseModelOptions.map(opt => ({
+    ...opt,
+    status: modelStatuses[opt.value] ? 'Downloaded' : 'Not downloaded'
+  }));
+
+  const chatModelOptions = baseChatModelOptions.map(opt => ({
+    ...opt,
+    status: modelStatuses[opt.value] ? 'Downloaded' : 'Not downloaded'
+  }));
+
   return (
-    <AnimatePresence>
+    <>
+      <DownloadConfirmModal
+        isOpen={isDownloadModalOpen}
+        modelName={pendingModelDownload?.name || ''}
+        modelType={pendingModelDownload?.type || 'whisper'}
+        onConfirm={() => {}}
+        onCancel={handleDownloadCancel}
+        onComplete={handleDownloadComplete}
+      />
+
+      <AnimatePresence>
       {isOpen && (
         <>
           <motion.div
@@ -78,7 +168,7 @@ export function SettingsPanel({
                 </div>
                 <select
                   value={settings.model}
-                  onChange={(e) => onSettingsChange({ model: e.target.value })}
+                  onChange={(e) => handleModelChange(e, 'whisper')}
                   disabled={isDisabled}
                   className={cn(
                     'w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground)] text-sm',
@@ -88,7 +178,7 @@ export function SettingsPanel({
                 >
                   {modelOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {opt.label} - {opt.description}
+                      {opt.label} ({opt.status}) - {opt.description}
                     </option>
                   ))}
                 </select>
@@ -100,7 +190,7 @@ export function SettingsPanel({
                 </div>
                 <select
                   value={settings.chatModel}
-                  onChange={(e) => onSettingsChange({ chatModel: e.target.value })}
+                  onChange={(e) => handleModelChange(e, 'chat')}
                   disabled={isDisabled}
                   className={cn(
                     'w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground)] text-sm',
@@ -110,7 +200,7 @@ export function SettingsPanel({
                 >
                   {chatModelOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {opt.label} - {opt.description}
+                      {opt.label} ({opt.status}) - {opt.description}
                     </option>
                   ))}
                 </select>
@@ -149,7 +239,14 @@ export function SettingsPanel({
               </div>
             </div>
 
-            <div className="p-4 border-t border-[var(--border)]">
+            <div className="p-4 border-t border-[var(--border)] flex flex-col gap-3">
+              <button
+                onClick={() => setIsModelManagerOpen(true)}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-[var(--border)] hover:bg-[var(--background-secondary)] text-[var(--foreground)] text-sm font-medium transition-colors"
+              >
+                <Database size={16} className="text-[var(--accent)]" />
+                Manage Local Models
+              </button>
               <p className="text-xs text-[var(--foreground-tertiary)] text-center">
                 Changes apply to next transcription
               </p>
@@ -158,5 +255,12 @@ export function SettingsPanel({
         </>
       )}
     </AnimatePresence>
+    <ModelManager
+      isOpen={isModelManagerOpen}
+      onClose={() => setIsModelManagerOpen(false)}
+      currentModel={settings.model}
+      currentChatModel={settings.chatModel}
+    />
+    </>
   );
 }

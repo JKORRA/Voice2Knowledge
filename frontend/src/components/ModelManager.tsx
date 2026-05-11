@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 
 interface Model {
   name: string;
+  type: string;
   downloaded: boolean;
 }
 
@@ -12,9 +13,10 @@ interface ModelManagerProps {
   isOpen: boolean;
   onClose: () => void;
   currentModel: string;
+  currentChatModel: string;
 }
 
-export function ModelManager({ isOpen, onClose, currentModel }: ModelManagerProps) {
+export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }: ModelManagerProps) {
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -101,9 +103,9 @@ export function ModelManager({ isOpen, onClose, currentModel }: ModelManagerProp
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-w-[90vw] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl z-50"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-w-[90vw] max-h-[85vh] flex flex-col bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl z-50 overflow-hidden"
           >
-            <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)] shrink-0 bg-[var(--card)]">
               <div className="flex items-center gap-2">
                 <Sparkles size={20} className="text-[var(--accent)]" />
                 <h2 className="text-lg font-semibold text-[var(--foreground)]">Manage Models</h2>
@@ -116,41 +118,43 @@ export function ModelManager({ isOpen, onClose, currentModel }: ModelManagerProp
               </button>
             </div>
 
-            <div className="p-4">
+            <div className="p-4 overflow-y-auto flex-1 min-h-0">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin text-[var(--accent)]" size={24} />
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {models.map((model) => (
+                  {models.map((model) => {
+                    const isActive = currentModel === model.name || currentChatModel === model.name;
+                    return (
                     <div
                       key={model.name}
                       className={cn(
                         'flex items-center justify-between p-4 rounded-lg border',
-                        currentModel === model.name
+                        isActive
                           ? 'border-[var(--accent)] bg-[var(--accent)]/5'
                           : 'border-[var(--border)]'
                       )}
                     >
                       <div className="flex items-center gap-3">
                         {model.downloaded ? (
-                          <CheckCircle size={20} className="text-[var(--success)]" />
+                          <CheckCircle size={20} className="text-[var(--success)] shrink-0" />
                         ) : (
-                          <Circle size={20} className="text-[var(--foreground-tertiary)]" />
+                          <Circle size={20} className="text-[var(--foreground-tertiary)] shrink-0" />
                         )}
                         <div>
                           <p className="font-medium text-[var(--foreground)]">{model.name}</p>
                           <p className="text-sm text-[var(--foreground-tertiary)]">
-                            {getModelDescription(model.name)}
+                            {model.type === 'chat' ? 'AI Assistant Model' : getModelDescription(model.name)}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         {model.downloaded ? (
                           <>
-                            {currentModel === model.name && (
+                            {isActive && (
                               <span className="text-xs px-2 py-1 rounded bg-[var(--accent)] text-white">
                                 Active
                               </span>
@@ -172,7 +176,7 @@ export function ModelManager({ isOpen, onClose, currentModel }: ModelManagerProp
                             {downloading === model.name ? (
                               <>
                                 <Loader2 size={14} className="animate-spin" />
-                                Downloading...
+                                Downloading
                               </>
                             ) : (
                               <>
@@ -184,12 +188,12 @@ export function ModelManager({ isOpen, onClose, currentModel }: ModelManagerProp
                         )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>
 
-            <div className="p-4 border-t border-[var(--border)]">
+            <div className="p-4 border-t border-[var(--border)] shrink-0">
               <p className="text-xs text-[var(--foreground-tertiary)] text-center">
                 Models are downloaded to your local machine. Delete unused models to save disk space.
               </p>

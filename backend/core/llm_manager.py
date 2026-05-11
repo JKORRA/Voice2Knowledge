@@ -23,40 +23,44 @@ class LLMManager:
         self.repo_id = LLM_MODELS[self.current_model_id]["repo_id"]
         self.filename = LLM_MODELS[self.current_model_id]["filename"]
         
-    def is_model_downloaded(self) -> bool:
+    def is_model_downloaded(self, model_id: str = None) -> bool:
         """Check if the GGUF model is cached."""
+        model_id = model_id or self.current_model_id
+        model_info = LLM_MODELS.get(model_id, LLM_MODELS["qwen2.5-3b"])
+        repo_id = model_info["repo_id"]
+        filename = model_info["filename"]
         try:
             from huggingface_hub import hf_hub_download
             # Check without downloading
             model_path = hf_hub_download(
-                repo_id=self.repo_id,
-                filename=self.filename,
+                repo_id=repo_id,
+                filename=filename,
                 local_files_only=True
             )
             return bool(model_path)
         except Exception:
             return False
 
-    async def download_model_async(self, progress_callback=None):
+    async def download_model_async(self, model_id: str = None, progress_callback=None):
         """Download the model via huggingface_hub."""
-        logger.info(f"Downloading LLM model {self.repo_id}...")
+        model_id = model_id or self.current_model_id
+        model_info = LLM_MODELS.get(model_id, LLM_MODELS["qwen2.5-3b"])
+        repo_id = model_info["repo_id"]
+        filename = model_info["filename"]
+        
+        logger.info(f"Downloading LLM model {repo_id}...")
         
         def _download():
             from huggingface_hub import hf_hub_download
-            return hf_hub_download(
-                repo_id=self.repo_id,
-                filename=self.filename,
-            )
+            from backend.core.download_progress import ProgressContext
+            with ProgressContext(progress_callback):
+                return hf_hub_download(
+                    repo_id=repo_id,
+                    filename=filename,
+                )
 
         try:
-            if progress_callback:
-                await progress_callback(0, f"Downloading LLM model (this may take a few minutes)...")
-                
             model_path = await asyncio.to_thread(_download)
-            
-            if progress_callback:
-                await progress_callback(100, "LLM model downloaded successfully.")
-                
             return model_path
         except Exception as e:
             logger.error(f"Error downloading LLM: {e}")

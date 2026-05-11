@@ -2,9 +2,11 @@ import os
 import asyncio
 from pathlib import Path
 import logging
-from faster_whisper import download_model
+import huggingface_hub
+from faster_whisper.utils import _MODELS
 
-from backend.core.config import settings, APP_DATA_DIR
+from backend.core.config import settings
+from backend.core.download_progress import ProgressContext, CustomTqdm
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -12,11 +14,13 @@ logger = logging.getLogger(__name__)
 class ModelManager:
     @staticmethod
     def is_model_downloaded(model_size: str) -> bool:
-        # Check if model exists in HF_HOME cache
-        # faster-whisper uses huggingface_hub snapshots
-        # We can just try to load local_files_only=True
+        repo_id = _MODELS.get(model_size, model_size)
         try:
-            download_model(model_size, local_files_only=True)
+            huggingface_hub.snapshot_download(
+                repo_id=repo_id,
+                local_files_only=True,
+                allow_patterns=["config.json", "preprocessor_config.json", "model.bin", "tokenizer.json", "vocabulary.*"]
+            )
             return True
         except Exception:
             return False
@@ -25,28 +29,21 @@ class ModelManager:
     async def download_model_async(model_size: str, progress_callback=None):
         """
         Downloads the model asynchronously. 
-        Note: huggingface_hub doesn't natively expose an async progress callback easily 
-        without deeply hooking into fsspec/requests, so we just run it in a thread.
+        progress_callback should be a synchronous thread-safe function taking a single integer argument (percentage).
         """
         logger.info(f"Starting download for model '{model_size}'...")
+        repo_id = _MODELS.get(model_size, model_size)
         
         def _download():
-            # In a real GUI we might want to capture stderr to get tqdm progress,
-            # but for now we just block and download.
-            return download_model(model_size)
+            with ProgressContext(progress_callback):
+                return huggingface_hub.snapshot_download(
+                    repo_id=repo_id,
+                    allow_patterns=["config.json", "preprocessor_config.json", "model.bin", "tokenizer.json", "vocabulary.*"],
+                    tqdm_class=CustomTqdm
+                )
             
         try:
-            # Let the UI know we've started
-            if progress_callback:
-                await progress_callback(0, f"Downloading model '{model_size}' (this may take a while)...")
-            
-            # Download in background thread
             model_path = await asyncio.to_thread(_download)
-            
-            # Let UI know we finished
-            if progress_callback:
-                await progress_callback(100, f"Model '{model_size}' downloaded successfully.")
-                
             return model_path
         except Exception as e:
             logger.error(f"Error downloading model: {e}")

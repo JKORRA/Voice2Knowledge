@@ -13,16 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 def is_cuda_available() -> bool:
-    """Check if CUDA is available without importing torch."""
-    # Method 1: Try ctranslate2 (already a dependency of faster-whisper)
+    """Check if CUDA is actually usable (not just present)."""
     try:
         import ctranslate2
         supported = ctranslate2.get_supported_compute_types("cuda")
-        return bool(supported)
+        if supported:
+            try:
+                ctranslate2.Ct2FastWhisper("small", device="cuda", compute_type="float16")
+                return True
+            except Exception:
+                pass
     except Exception:
         pass
 
-    # Method 2: Check for nvidia-smi
     try:
         import subprocess
         result = subprocess.run(

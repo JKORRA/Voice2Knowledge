@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Check, FileAudio, CheckSquare, Square } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
-import { cn } from '../lib/utils';
+import { cn, getOriginalFilename } from '../lib/utils';
 
 export function ContextSelector() {
   const { messages, selectedContextFiles, toggleContextFile, selectAllContextFiles, isGenerating, isTranscribing } = useChatStore();
@@ -25,7 +25,7 @@ export function ContextSelector() {
   }
 
   const getFilename = (filepath: string) => {
-    return filepath.split(/[/\\]/).pop() || filepath;
+    return getOriginalFilename(filepath);
   };
 
   const isAllSelected = selectedContextFiles.length === availableFiles.length;

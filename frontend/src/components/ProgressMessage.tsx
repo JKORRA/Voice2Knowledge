@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Bot, AudioLines } from 'lucide-react';
+import { getOriginalFilename } from '../lib/utils';
 
 interface ProgressMessageProps {
   file: string;
@@ -8,7 +9,12 @@ interface ProgressMessageProps {
 }
 
 export function ProgressMessage({ file, percent, content }: ProgressMessageProps) {
-  const fileName = file.split('/').pop() || file;
+  const isDownloading = file === 'setup' || file === 'llm_setup';
+  
+  let fileName = getOriginalFilename(file);
+  if (isDownloading) {
+    fileName = file === 'setup' ? 'Transcription Engine' : 'AI Assistant';
+  }
 
   return (
     <motion.div

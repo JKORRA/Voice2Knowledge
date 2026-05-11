@@ -7,11 +7,23 @@ from faster_whisper import WhisperModel
 logger = logging.getLogger(__name__)
 
 class LectureTranscriber:
-    def __init__(self, model_size="small", device="cpu", compute_type="int8"):
+    def __init__(self, model_size="small", device="cpu", compute_type="int8", fallback_to_cpu=True):
         logger.info(
             f"Loading faster-whisper '{model_size}' model (device={device}, compute_type={compute_type})..."
         )
-        self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        self._device = device
+        self._compute_type = compute_type
+        try:
+            self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        except RuntimeError as e:
+            cuda_err = str(e)
+            if fallback_to_cpu and device == "cuda" and "CUDA" in cuda_err:
+                logger.warning(f"CUDA failed ({cuda_err}), falling back to CPU with int8...")
+                self._device = "cpu"
+                self._compute_type = "int8"
+                self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
+            else:
+                raise
 
     def format_timestamp(self, seconds):
         hours = int(seconds // 3600)
@@ -97,15 +109,24 @@ class TranscriberWrapper:
         self._lock = asyncio.Lock()
         self._model = None
         self._current_model_size = None
+        self._current_device = None
+        self._current_compute_type = None
 
     def _ensure_model_loaded(self, model_size, device, compute_type):
-        if self._model is None or self._current_model_size != model_size:
+        if (
+            self._model is None
+            or self._current_model_size != model_size
+            or self._current_device != device
+            or self._current_compute_type != compute_type
+        ):
             self._model = LectureTranscriber(
                 model_size=model_size,
                 device=device,
                 compute_type=compute_type
             )
             self._current_model_size = model_size
+            self._current_device = device
+            self._current_compute_type = compute_type
 
     async def transcribe(self, audio_path, output_dir, model_size, language, device, compute_type, beam_size, progress_callback=None, cancel_event=None):
         async with self._lock:
@@ -129,6 +150,8 @@ class TranscriberWrapper:
                 logger.info("Unloading faster-whisper model to free memory...")
                 self._model = None
                 self._current_model_size = None
+                self._current_device = None
+                self._current_compute_type = None
                 import gc
                 gc.collect()
                 try:

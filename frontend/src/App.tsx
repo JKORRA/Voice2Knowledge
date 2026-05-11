@@ -12,6 +12,7 @@ import { ProgressMessage } from './components/ProgressMessage';
 import { ResultMessage } from './components/ResultMessage';
 import { ChatInput } from './components/ChatInput';
 import { ContextSelector } from './components/ContextSelector';
+import { SetupScreen } from './components/SetupScreen';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from './lib/utils';
 
@@ -37,8 +38,26 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [showChatInput, setShowChatInput] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<{ paths: string[], names: string[] } | null>(null);
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Check if we need setup
+    const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? window.location.host
+      : '127.0.0.1:8000';
+      
+    fetch(`http://${host}/api/setup/status`)
+      .then(res => res.json())
+      .then(data => {
+        setNeedsSetup(!data.is_ready);
+      })
+      .catch(err => {
+        console.error("Setup status check failed", err);
+        setNeedsSetup(false); // Fallback
+      });
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -157,6 +176,18 @@ export default function App() {
         );
     }
   };
+
+  if (needsSetup === null) {
+    return (
+      <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)] items-center justify-center">
+        <Loader2 className="animate-spin text-[var(--accent)] w-8 h-8" />
+      </div>
+    );
+  }
+
+  if (needsSetup) {
+    return <SetupScreen onComplete={() => setNeedsSetup(false)} />;
+  }
 
   return (
     <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)]">

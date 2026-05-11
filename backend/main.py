@@ -16,18 +16,15 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure default model is downloaded
-    # (Normally handled by the launcher splash screen, but good to ensure here)
+    # Startup: We no longer download models blocking here.
+    # The frontend Setup screen handles missing default models.
     if not model_manager.is_model_downloaded(settings.default_model):
-        logger.info(f"Default model '{settings.default_model}' not found locally. Downloading...")
-        # Since we might block startup, this is a fallback.
-        await model_manager.download_model_async(settings.default_model)
+        logger.info(f"Default model '{settings.default_model}' not found locally. Waiting for UI setup.")
     else:
         logger.info(f"Default model '{settings.default_model}' is already cached.")
         
     if not llm_manager.is_model_downloaded():
-        logger.info(f"LLM model '{llm_manager.repo_id}' not found locally. Downloading...")
-        await llm_manager.download_model_async()
+        logger.info(f"LLM model '{llm_manager.repo_id}' not found locally. Waiting for UI setup.")
     else:
         logger.info(f"LLM model '{llm_manager.repo_id}' is already cached.")
         

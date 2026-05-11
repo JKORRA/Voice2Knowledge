@@ -17,6 +17,85 @@ router = APIRouter()
 
 active_sessions: Dict[str, threading.Event] = {}
 
+@router.websocket("/ws/setup")
+async def setup_ws(websocket: WebSocket):
+    await websocket.accept()
+    from backend.core.model_manager import model_manager
+    from backend.core.llm_manager import llm_manager
+    from backend.core.config import settings
+
+    whisper_ready = model_manager.is_model_downloaded(settings.default_model)
+    llm_ready = llm_manager.is_model_downloaded()
+
+    if whisper_ready and llm_ready:
+        await websocket.send_json({"type": "done"})
+        await websocket.close()
+        return
+
+    progress_queue = asyncio.Queue()
+
+    async def queue_forwarder():
+        while True:
+            try:
+                msg = await progress_queue.get()
+                await websocket.send_json(msg)
+                if msg.get("type") in ["error", "done"]:
+                    break
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Queue forwarder error: {e}")
+                break
+
+    forwarder_task = asyncio.create_task(queue_forwarder())
+
+    try:
+        loop = asyncio.get_running_loop()
+        if not whisper_ready:
+            def whisper_cb(pct):
+                loop.call_soon_threadsafe(progress_queue.put_nowait, {
+                    "type": "progress",
+                    "component": "whisper",
+                    "percent": pct,
+                    "message": f"Downloading Transcription Model (Whisper {settings.default_model})"
+                })
+            
+            progress_queue.put_nowait({
+                "type": "progress",
+                "component": "whisper",
+                "percent": 0,
+                "message": f"Starting Download: Transcription Model (Whisper {settings.default_model})"
+            })
+            await model_manager.download_model_async(settings.default_model, progress_callback=whisper_cb)
+
+        if not llm_ready:
+            def llm_cb(pct):
+                loop.call_soon_threadsafe(progress_queue.put_nowait, {
+                    "type": "progress",
+                    "component": "llm",
+                    "percent": pct,
+                    "message": f"Downloading AI Chat Model ({llm_manager.repo_id.split('/')[-1]})"
+                })
+            
+            progress_queue.put_nowait({
+                "type": "progress",
+                "component": "llm",
+                "percent": 0,
+                "message": f"Starting Download: AI Chat Model ({llm_manager.repo_id.split('/')[-1]})"
+            })
+            await llm_manager.download_model_async(progress_callback=llm_cb)
+
+        progress_queue.put_nowait({"type": "done"})
+    except Exception as e:
+        logger.error(f"Error in setup websocket: {e}")
+        progress_queue.put_nowait({"type": "error", "message": str(e)})
+    finally:
+        await forwarder_task
+        try:
+            await websocket.close()
+        except:
+            pass
+
 def get_device_info():
     """Determine device and compute type with error handling."""
     try:
@@ -34,6 +113,59 @@ def get_device_info():
             "cuda_device_name": None,
             "error": str(e)
         }
+
+@router.websocket("/ws/download/{model_type}/{model_name}")
+async def download_model_ws(websocket: WebSocket, model_type: str, model_name: str):
+    await websocket.accept()
+    from backend.core.model_manager import model_manager
+    from backend.core.llm_manager import llm_manager
+
+    progress_queue = asyncio.Queue()
+
+    async def queue_forwarder():
+        while True:
+            try:
+                msg = await progress_queue.get()
+                await websocket.send_json(msg)
+                if msg.get("type") in ["error", "done"]:
+                    break
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Queue forwarder error: {e}")
+                break
+
+    forwarder_task = asyncio.create_task(queue_forwarder())
+
+    try:
+        loop = asyncio.get_running_loop()
+        def cb(pct):
+            loop.call_soon_threadsafe(progress_queue.put_nowait, {
+                "type": "progress",
+                "percent": pct
+            })
+
+        if model_type == "whisper":
+            if not model_manager.is_model_downloaded(model_name):
+                progress_queue.put_nowait({"type": "progress", "percent": 0})
+                await model_manager.download_model_async(model_name, progress_callback=cb)
+        elif model_type == "chat":
+            if not llm_manager.is_model_downloaded(model_name):
+                progress_queue.put_nowait({"type": "progress", "percent": 0})
+                await llm_manager.download_model_async(model_name, progress_callback=cb)
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+
+        progress_queue.put_nowait({"type": "done"})
+    except Exception as e:
+        logger.error(f"Error in download websocket: {e}")
+        progress_queue.put_nowait({"type": "error", "message": str(e)})
+    finally:
+        await forwarder_task
+        try:
+            await websocket.close()
+        except:
+            pass
 
 @router.websocket("/ws/transcribe/{session_id}")
 async def transcribe_ws(websocket: WebSocket, session_id: str):
@@ -118,6 +250,15 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
             "cuda_device_name": device_info.get("cuda_device_name"),
         })
 
+        from backend.core.model_manager import model_manager
+        if not model_manager.is_model_downloaded(model_size):
+            await websocket.send_json({
+                "type": "error",
+                "message": f"Transcription model '{model_size}' is not downloaded. Please download it from Settings first."
+            })
+            return
+
+        loop = asyncio.get_running_loop()
         for file_path in valid_files:
             if cancel_event.is_set():
                 break
@@ -130,8 +271,7 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
             })
 
             def progress_callback(percent, partial_text):
-                # Thread-safe: put in queue, no event loop needed
-                progress_queue.put_nowait({
+                loop.call_soon_threadsafe(progress_queue.put_nowait, {
                     "type": "progress",
                     "file": file_path,
                     "percent": percent,
@@ -267,6 +407,13 @@ async def chat_ws(websocket: WebSocket, session_id: str):
 Context:
 {context_text}
 [/INST]"""
+
+        if not llm_manager.is_model_downloaded(chat_model):
+            await websocket.send_json({
+                "type": "error",
+                "message": f"Chat model '{chat_model}' is not downloaded. Please download it from Settings first."
+            })
+            return
 
         await websocket.send_json({"type": "status", "message": "Thinking..."})
 

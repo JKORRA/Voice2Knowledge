@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Bot, FileText, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
+import { getOriginalFilename } from '../lib/utils';
 
 interface ResultMessageProps {
   file: string;
@@ -12,14 +13,43 @@ export function ResultMessage({ file, content, txtPath }: ResultMessageProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const fileName = file.split('/').pop() || file;
+  const fileName = getOriginalFilename(file);
   const isLong = content.length > 500;
   const displayContent = isLong && !expanded ? content.substring(0, 500) + '...' : content;
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      // 1. Detect if we are running inside pywebview
+      // @ts-ignore - Bypass TS warning for custom window property
+      const isWebView = typeof window !== 'undefined' && window.pywebview !== undefined;
+
+      // 2. Force the fallback if in pywebview, OR if secure context/clipboard API is missing
+      if (isWebView || !navigator.clipboard || !window.isSecureContext) {
+        const textArea = document.createElement("textarea");
+        textArea.value = content;
+        
+        // Prevent scrolling to bottom
+        textArea.style.position = "absolute";
+        textArea.style.left = "-999999px";
+        
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        return;
+      }
+
+      // 3. Normal browser behavior
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      // Silent fail - do not crash
+    }
   };
 
   const handleDownload = (path: string) => {
@@ -75,13 +105,23 @@ export function ResultMessage({ file, content, txtPath }: ResultMessageProps) {
 
         <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
           {txtPath && (
-            <button
-              onClick={() => handleDownload(txtPath)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
-            >
-              <FileText size={14} />
-              Text
-            </button>
+            <>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
+                title="Copy to clipboard"
+              >
+                {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <button
+                onClick={() => handleDownload(txtPath)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
+              >
+                <FileText size={14} />
+                Text
+              </button>
+            </>
           )}
         </div>
       </div>

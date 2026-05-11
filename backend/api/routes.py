@@ -115,19 +115,47 @@ async def export_transcription(
         headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
 
+@router.get("/setup/status")
+async def get_setup_status():
+    from backend.core.model_manager import model_manager
+    from backend.core.llm_manager import llm_manager
+    from backend.core.config import settings
+
+    whisper_ready = model_manager.is_model_downloaded(settings.default_model)
+    llm_ready = llm_manager.is_model_downloaded()
+
+    return {
+        "is_ready": whisper_ready and llm_ready,
+        "whisper_ready": whisper_ready,
+        "llm_ready": llm_ready,
+    }
+
 AVAILABLE_MODELS = ['tiny', 'base', 'small', 'medium', 'large-v3']
+AVAILABLE_CHAT_MODELS = ['qwen2.5-3b', 'llama-3.2-1b', 'phi-3.5-mini']
 
 @router.get("/models")
 async def get_models():
     from backend.core.model_manager import model_manager
+    from backend.core.llm_manager import llm_manager
+    
     models_status = []
     for model in AVAILABLE_MODELS:
         is_downloaded = model_manager.is_model_downloaded(model)
         models_status.append({
             "name": model,
+            "type": "transcription",
             "downloaded": is_downloaded
         })
-    return {"models": models_status, "default": settings.default_model}
+        
+    for model in AVAILABLE_CHAT_MODELS:
+        is_downloaded = llm_manager.is_model_downloaded(model)
+        models_status.append({
+            "name": model,
+            "type": "chat",
+            "downloaded": is_downloaded
+        })
+        
+    return {"models": models_status, "default": settings.default_model, "default_chat": settings.default_model}
 
 @router.post("/models/download")
 async def download_model(model: str = Query(..., pattern='^(tiny|base|small|medium|large-v3)$')):
@@ -140,14 +168,37 @@ async def download_model(model: str = Query(..., pattern='^(tiny|base|small|medi
 
 @router.delete("/models/{model_name}")
 async def delete_model(model_name: str):
+    from backend.core.llm_manager import LLM_MODELS
+    from faster_whisper.utils import _MODELS
+    
     try:
         model_path = Path(settings.output_dir).parent / "huggingface" / "hub"
-        if model_path.exists():
-            import shutil
-            model_dir = model_path / f"models--Systran--faster-whisper-{model_name}"
+        if not model_path.exists():
+            return {"status": "not_found", "model": model_name}
+
+        import shutil
+        deleted = False
+
+        if model_name in _MODELS or model_name in AVAILABLE_MODELS:
+            # It's a whisper model
+            repo_id = _MODELS.get(model_name, f"Systran/faster-whisper-{model_name}")
+            dir_name = "models--" + repo_id.replace("/", "--")
+            model_dir = model_path / dir_name
             if model_dir.exists():
                 shutil.rmtree(model_dir)
-                return {"status": "deleted", "model": model_name}
+                deleted = True
+
+        elif model_name in LLM_MODELS:
+            # It's a chat model
+            repo_id = LLM_MODELS[model_name]["repo_id"]
+            dir_name = "models--" + repo_id.replace("/", "--")
+            model_dir = model_path / dir_name
+            if model_dir.exists():
+                shutil.rmtree(model_dir)
+                deleted = True
+
+        if deleted:
+            return {"status": "deleted", "model": model_name}
         return {"status": "not_found", "model": model_name}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
