@@ -1,132 +1,140 @@
 # Voice2Knowledge
 
-A modern, cross-platform desktop application for transcribing audio files to text using local AI. All transcription happens completely offline on your device, ensuring maximum privacy for your work calls, lectures, meetings, and personal recordings.
+A privacy-first local audio transcription tool. All processing happens on your device - your audio never leaves your machine.
 
 ---
 
-## ⚡ Download & Install (For Regular Users)
+## Quick Start
 
-You **do not** need any technical knowledge, coding experience, or command-line tools to use Voice2Knowledge.
+### For Regular Users
+- Download from Releases (Windows/Mac/Linux)
+- Single executable, no installation needed
 
-### 🪟 Windows
-1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest).
-2. Scroll down to the **Assets** section at the bottom of the release notes.
-3. Download the `Voice2Knowledge-Windows.zip` file (do **not** download the "Source code").
-4. Extract (unzip) the file.
-5. Open the extracted folder and double-click `Voice2Knowledge.exe`.
-
-### 🍎 macOS
-1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest).
-2. Scroll down to the **Assets** section at the bottom of the release notes.
-3. Download the `Voice2Knowledge-macOS.zip` file (do **not** download the "Source code").
-4. Extract (unzip) the file.
-4. **Important Security Step**: The first time you open the app, macOS will show a warning saying it cannot verify the developer. To bypass this:
-   - **Right-click** (or Control-click) on the `Voice2Knowledge` app.
-   - Click **Open** from the menu.
-   - Click **Open** again on the pop-up warning. (You only need to do this once).
-
-### 🐧 Linux
-1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest).
-2. Scroll down to the **Assets** section at the bottom of the release notes.
-3. Download the `Voice2Knowledge-Linux.tar.gz` file (do **not** download the "Source code").
-4. Extract the archive.
-4. Right-click the `Voice2Knowledge` file inside the folder, select **Properties**, go to **Permissions**, and check **"Allow executing file as program"**.
-5. Double-click the file to run it.
+### For Developers
+- Clone repo, then run: `./build.sh` (Linux/macOS) or `build.bat` (Windows)
+- Output in dist/Voice2Knowledge/
 
 ---
 
-## 🎙️ How to Use
+## Download & Install (Regular Users)
 
-1. **Upload Audio**: Click the upload area or drag and drop your audio files (MP3, M4A, WAV, etc.) onto the window.
-2. **Start Transcription**: Click the upload button to begin.
-3. **Wait**: The AI will transcribe your audio. A progress bar will keep you updated.
-4. **Export**: Once finished, download the results as a Text (.txt), Word (.docx), or PDF file!
+### Windows
+1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest)
+2. Download `Voice2Knowledge-Windows.zip`
+3. Extract and run `Voice2Knowledge.exe`
 
-*(Optional)* Click the gear icon ⚙️ to change settings, such as using a larger AI model for better accuracy or forcing a specific language.
+### macOS
+1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest)
+2. Download `Voice2Knowledge-macOS.zip`
+3. Extract the archive
+4. Right-click the app and select **Open** (bypasses the security warning on first run)
+
+### Linux
+1. Go to the [Releases page](https://github.com/JKORRA/Voice2Knowledge/releases/latest)
+2. Download `Voice2Knowledge-Linux.tar.gz`
+3. Extract and run: `chmod +x Voice2Knowledge && ./Voice2Knowledge`
 
 ---
 
-## 🌟 Key Features
+## Running the Application
 
-- **Privacy First**: All transcription happens locally on your device - your audio files never leave your machine.
-- **Cross-Platform**: Works smoothly on Windows, macOS, and Linux.
-- **Hardware Adaptive**: Automatically uses your GPU if available for blazing-fast transcription, or falls back to your CPU.
-- **Automatic Setup**: No need to install third-party dependencies like FFmpeg; everything is bundled out of the box!
-- **History & Export**: Search your past transcriptions and export them seamlessly.
+### Option A: Desktop App (Recommended)
+- Pre-built: Download from Releases
+- From source: `python src/launcher.py` (after setup)
+
+### Option B: Web UI (Development Mode)
+Two ways to run:
+1. **Two-terminal setup:**
+   - Terminal 1: `python -m uvicorn backend.main:app --reload --port 8000`
+   - Terminal 2: `cd frontend && npm run dev`
+   - Open http://localhost:5173
+
+2. **Single command (pywebview):**
+   - After setup: `python src/launcher.py`
+
+### Option C: CLI (Lightweight - No UI)
+```bash
+python script.py "audio.wav" -m small -l it
+```
+Perfect for batch processing or servers. Full guide in `guide.md`.
 
 ---
 
-## 🛠️ For Developers
-
-If you want to build the project from source or contribute, follow these instructions:
+## Building from Source
 
 ### Prerequisites
-
 - Python 3.9+
 - Node.js 18+
 
-*(Note: FFmpeg is automatically bundled using `imageio-ffmpeg` via Python)*
-
-### 1. Clone & Setup
-
+### Quick Build (Recommended)
 ```bash
-git clone https://github.com/JKORRA/Voice2Knowledge.git
-cd Voice2Knowledge
+# Linux/macOS
+./build.sh
 
-# Create and activate Python virtual environment
+# Windows
+build.bat
+```
+Output: `dist/Voice2Knowledge/`
+
+### Manual Build
+```bash
+# 1. Create venv
 python -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\Activate
 
-# Install Python dependencies
+# 2. Activate venv
+# Linux/macOS
+source venv/bin/activate
+
+# Windows (PowerShell)
+.\venv\Scripts\Activate.ps1
+
+# Windows (CMD)
+.\venv\Scripts\Activate.bat
+
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# Install Frontend dependencies
-cd frontend
-npm install
-```
+# 4. Build frontend
+cd frontend && npm install && npm run build && cd ..
 
-### 2. Run in Development Mode
-
-**Terminal 1 (Backend API):**
-```bash
-python -m uvicorn backend.main:app --reload --port 8000
-```
-
-**Terminal 2 (Frontend UI):**
-```bash
-cd frontend
-npm run dev
-```
-
-Then open `http://localhost:5173` in your browser.
-
-**Alternatively, run the full desktop experience via pywebview:**
-```bash
-python src/launcher.py
-```
-
-### 3. Build Executable
-
-To build the standalone executable locally:
-
-```bash
-# 1. Build frontend
-cd frontend
-npm run build
-cd ..
-
-# 2. Package with PyInstaller
+# 5. Package
+pip install pyinstaller
 pyinstaller app.spec --clean -y
 ```
 
-The output will be located in `dist/Voice2Knowledge/`.
+---
 
-*(Note: This project also utilizes GitHub Actions for automated cross-platform CI/CD builds on every release).*
+## Key Features
+- **Privacy First**: All local, audio never leaves your device
+- **Cross-Platform**: Windows, macOS, Linux
+- **GPU Acceleration**: Auto-detects GPU for faster transcription, falls back to CPU
+- **History & Export**: TXT, PDF, DOCX export
+- **Chat with Transcriptions**: Local LLM integration
 
 ---
 
-## 📜 License
+## Project Structure
+```
+Voice2Knowledge/
+├── backend/          # FastAPI backend (audio processing, transcription)
+├── frontend/         # React + Vite UI
+├── src/              # Core utilities (launcher, models, config)
+├── script.py         # Lightweight CLI tool
+├── build.sh/.bat    # Build scripts
+├── app.spec         # PyInstaller configuration
+└── guide.md         # CLI usage guide
+```
 
-MIT License
+---
 
-Copyright (c) 2024 Voice2Knowledge
+## Troubleshooting
+
+- **GPU not detected**: Falls back to CPU automatically, works fine but slower
+- **Port 8000 in use**: Change port: `python -m uvicorn backend.main:app --port 9000`
+- **Model download slow**: First run downloads models (~1GB), subsequent runs are faster
+
+---
+
+## License
+
+MIT

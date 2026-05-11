@@ -3,6 +3,11 @@ set -e
 
 echo "Building Voice2Knowledge..."
 
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python -m venv venv
+fi
+
 echo "1. Building frontend..."
 cd frontend
 npm install
