@@ -44,6 +44,10 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? window.location.host
+    : '127.0.0.1:8000';
+
   useEffect(() => {
     fetch(`http://${host}/api/setup/status`)
       .then(res => res.json())
@@ -120,10 +124,6 @@ export default function App() {
     setShowChatInput(false);
     setPendingFiles(null);
   };
-
-  const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? window.location.host
-    : '127.0.0.1:8000';
 
   const handleLoadSession = async (sessionId: string) => {
     const res = await fetch(`http://${host}/api/sessions/${sessionId}`);

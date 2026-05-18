@@ -20,7 +20,6 @@ export function ResultMessage({ file, content, txtPath }: ResultMessageProps) {
   const handleCopy = async () => {
     try {
       // 1. Detect if we are running inside pywebview
-      // @ts-expect-error - pywebview custom property
       const isWebView = typeof window !== 'undefined' && (window as { pywebview?: unknown }).pywebview !== undefined;
 
       // 2. Force the fallback if in pywebview, OR if secure context/clipboard API is missing
