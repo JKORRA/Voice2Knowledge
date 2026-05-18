@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Check, FileAudio, CheckSquare, Square } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 import { cn, getOriginalFilename } from '../lib/utils';
@@ -7,18 +7,18 @@ export function ContextSelector() {
   const { messages, selectedContextFiles, toggleContextFile, selectAllContextFiles, isGenerating, isTranscribing } = useChatStore();
 
   // Extract unique files from result messages
-  const availableFiles = Array.from(new Set(
+  const availableFiles = useMemo(() => Array.from(new Set(
     messages
       .filter(m => m.type === 'result' && m.file)
       .map(m => m.file!)
-  ));
+  )), [messages]);
 
   // Initialize selection when files are available but selection is empty
   useEffect(() => {
     if (availableFiles.length > 0 && selectedContextFiles.length === 0) {
       selectAllContextFiles(availableFiles);
     }
-  }, [availableFiles.length, selectedContextFiles.length, selectAllContextFiles]);
+  }, [availableFiles, selectedContextFiles.length, selectAllContextFiles]);
 
   if (availableFiles.length === 0) {
     return null;

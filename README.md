@@ -104,6 +104,48 @@ pyinstaller app.spec --clean -y
 
 ---
 
+## Tech Stack
+
+### Backend
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) + Uvicorn (REST API + WebSocket real-time)
+- **Transcription**: [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) (CTranslate2-optimized Whisper, no PyTorch)
+- **Local LLM**: [`llama-cpp-python`](https://github.com/abetlen/llama-cpp-python) (GGUF quantized models)
+- **Database**: SQLite (transcription & chat history, no external DB server needed)
+- **GPU Detection**: Lightweight probe via ctranslate2 + nvidia-smi fallback (zero torch dependency)
+- **Desktop Wrapper**: [pywebview](https://pywebview.flowrl.com/) + PyQt6
+- **Export**: TXT, PDF ([fpdf2](https://github.com/andreax79/fpdf2)), DOCX ([python-docx](https://github.com/python-openxml/python-docx))
+
+### Frontend
+- **UI**: React 19 + TypeScript 6 + Vite 8
+- **Styling**: Tailwind CSS 3
+- **State**: Zustand
+- **Animation**: framer-motion
+- **Icons**: lucide-react
+
+### Models
+
+**Whisper** (transcription, via faster-whisper):
+
+| Size | Default |
+|------|---------|
+| `tiny`, `base` | |
+| `small` | ✅ Default |
+| `medium`, `large-v3` | |
+
+**LLM** (chat, via llama.cpp — all GGUF Q4_K_M):
+
+| Model | Size | Default |
+|-------|------|---------|
+| Qwen 2.5 3B Instruct | ~1.8 GB | ✅ Default |
+| Llama 3.2 1B Instruct | ~0.7 GB | |
+| Phi 3.5 Mini Instruct | ~2.2 GB | |
+
+### Build
+- **Packaging**: PyInstaller (`torch` excluded for smaller bundle, ~200-300 MB)
+- **CLI**: Standalone `script.py` for batch processing
+
+---
+
 ## Key Features
 - **Privacy First**: All local, audio never leaves your device
 - **Cross-Platform**: Windows, macOS, Linux

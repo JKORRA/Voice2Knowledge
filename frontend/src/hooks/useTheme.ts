@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, startTransition } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
@@ -10,7 +10,9 @@ export function useTheme() {
   useEffect(() => {
     const stored = localStorage.getItem('theme') as Theme | null;
     if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      setTheme(stored);
+      startTransition(() => {
+        setTheme(stored);
+      });
     }
   }, []);
 

@@ -59,7 +59,7 @@ export function SettingsPanel({
       .then(res => res.json())
       .then(data => {
         const statuses: Record<string, boolean> = {};
-        data.models.forEach((m: any) => {
+        data.models.forEach((m: { name: string; downloaded: boolean }) => {
           statuses[m.name] = m.downloaded;
         });
         setModelStatuses(statuses);

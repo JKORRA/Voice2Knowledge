@@ -6,6 +6,7 @@ import { useChatWebSocket } from './hooks/useChatWebSocket';
 import { useTheme } from './hooks/useTheme';
 import { Header } from './components/Header';
 import { SettingsPanel } from './components/SettingsPanel';
+import { HistoryPanel } from './components/HistoryPanel';
 import { EmptyState } from './components/EmptyState';
 import { ChatMessage } from './components/ChatMessage';
 import { ProgressMessage } from './components/ProgressMessage';
@@ -37,17 +38,13 @@ export default function App() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [showChatInput, setShowChatInput] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<{ paths: string[], names: string[] } | null>(null);
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check if we need setup
-    const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? window.location.host
-      : '127.0.0.1:8000';
-      
     fetch(`http://${host}/api/setup/status`)
       .then(res => res.json())
       .then(data => {
@@ -57,7 +54,7 @@ export default function App() {
         console.error("Setup status check failed", err);
         setNeedsSetup(false); // Fallback
       });
-  }, []);
+  }, [host]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,10 +71,6 @@ export default function App() {
     });
 
     try {
-      const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? window.location.host
-        : '127.0.0.1:8000';
-
       const res = await fetch(`http://${host}/api/upload`, {
         method: 'POST',
         body: formData,
@@ -119,6 +112,44 @@ export default function App() {
 
     sendFiles(pendingFiles.paths);
     setPendingFiles(null);
+  };
+
+  const handleNewChat = () => {
+    useChatStore.getState().clearMessages();
+    useChatStore.getState().setSessionId(null);
+    setShowChatInput(false);
+    setPendingFiles(null);
+  };
+
+  const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? window.location.host
+    : '127.0.0.1:8000';
+
+  const handleLoadSession = async (sessionId: string) => {
+    const res = await fetch(`http://${host}/api/sessions/${sessionId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    useChatStore.getState().clearMessages();
+    useChatStore.getState().setSessionId(sessionId);
+    for (const t of data.transcriptions) {
+      addMessage({
+        role: 'assistant',
+        type: 'result',
+        content: t.text_content || '',
+        file: t.filename,
+        txtPath: t.file_path,
+      });
+    }
+    for (const msg of data.chats) {
+      addMessage({
+        role: msg.role as 'user' | 'assistant',
+        type: 'text',
+        content: msg.content,
+      });
+    }
+    if (data.transcriptions.length > 0 || data.chats.length > 0) {
+      setShowChatInput(true);
+    }
   };
 
   const handleSendQuestion = (question: string) => {
@@ -171,7 +202,7 @@ export default function App() {
         return (
           <ChatMessage
             key={msg.id}
-            msg={msg as any}
+            msg={msg as { content: string; role: 'user' | 'assistant'; files?: { names: string[] } }}
           />
         );
     }
@@ -199,9 +230,17 @@ export default function App() {
         isDisabled={isTranscribing}
       />
 
+      <HistoryPanel
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        onLoadSession={handleLoadSession}
+      />
+
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <Header
           onSettingsClick={() => setShowSettings(true)}
+          onHistoryClick={() => setShowHistory(true)}
+          onNewChat={handleNewChat}
           isConnected={isConnected}
           theme="system"
           resolvedTheme={resolvedTheme}

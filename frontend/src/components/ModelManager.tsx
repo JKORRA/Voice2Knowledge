@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Trash2, Sparkles, Loader2, CheckCircle, Circle, Mic, MessageSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -21,12 +21,6 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchModels();
-    }
-  }, [isOpen]);
-
   const fetchModels = async () => {
     setLoading(true);
     try {
@@ -43,6 +37,14 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      startTransition(() => {
+        fetchModels();
+      });
+    }
+  }, [isOpen]);
 
   const handleDownload = async (modelName: string) => {
     setDownloading(modelName);

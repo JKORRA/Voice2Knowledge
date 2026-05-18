@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download } from 'lucide-react';
 
@@ -25,9 +25,11 @@ export function DownloadConfirmModal({
 
   useEffect(() => {
     if (!isOpen) {
-      setIsDownloading(false);
-      setProgress(0);
-      setError(null);
+      startTransition(() => {
+        setIsDownloading(false);
+        setProgress(0);
+        setError(null);
+      });
     }
   }, [isOpen]);
 

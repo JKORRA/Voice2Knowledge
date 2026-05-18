@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
-import { Settings, Bot, Moon, Sun } from 'lucide-react';
+import { Settings, Bot, Moon, Sun, Clock, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface HeaderProps {
   onSettingsClick: () => void;
+  onHistoryClick: () => void;
+  onNewChat: () => void;
   isConnected: boolean;
   theme: 'light' | 'dark' | 'system';
   resolvedTheme: 'light' | 'dark';
@@ -12,6 +14,8 @@ interface HeaderProps {
 
 export function Header({
   onSettingsClick,
+  onHistoryClick,
+  onNewChat,
   isConnected,
   resolvedTheme,
   onThemeToggle,
@@ -38,6 +42,22 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          onClick={onNewChat}
+          className="p-2 hover:bg-[var(--button-secondary-hover)] rounded-lg transition-colors text-[var(--foreground-secondary)]"
+          title="New Chat"
+        >
+          <Plus size={20} />
+        </button>
+
+        <button
+          onClick={onHistoryClick}
+          className="p-2 hover:bg-[var(--button-secondary-hover)] rounded-lg transition-colors text-[var(--foreground-secondary)]"
+          title="History"
+        >
+          <Clock size={20} />
+        </button>
+
         <button
           onClick={onThemeToggle}
           className="p-2 hover:bg-[var(--button-secondary-hover)] rounded-lg transition-colors text-[var(--foreground-secondary)]"

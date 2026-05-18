@@ -57,39 +57,10 @@ async def get_settings():
         "output_dir": str(settings.output_dir),
     }
 
-@router.get("/history")
-async def get_history(
-    limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    search: Optional[str] = Query(None),
-):
-    transcriptions = db.get_transcriptions(limit=limit, offset=offset, search=search)
-    total = db.get_transcription_count(search=search)
-    return {
-        "transcriptions": transcriptions,
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-    }
-
-@router.get("/history/{transcription_id}")
-async def get_transcription(transcription_id: int):
-    transcription = db.get_transcription(transcription_id)
-    if not transcription:
-        raise HTTPException(status_code=404, detail="Transcription not found")
-    return transcription
-
-@router.delete("/history/{transcription_id}")
-async def delete_transcription(transcription_id: int):
-    success = db.delete_transcription(transcription_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Transcription not found")
-    return {"status": "deleted", "id": transcription_id}
-
 @router.get("/export/{transcription_id}")
 async def export_transcription(
     transcription_id: int,
-    format: str = Query('txt', regex='^(txt|pdf|docx)$'),
+    format: str = Query('txt', pattern='^(txt|pdf|docx)$'),
 ):
     transcription = db.get_transcription(transcription_id)
     if not transcription:
@@ -113,6 +84,44 @@ async def export_transcription(
         media_type=f'application/{format}',
         headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
+
+def _make_session_preview(session: dict) -> str:
+    if session.get("title"):
+        return session["title"]
+    return f"Session {session['session_id'][:8]}"
+
+@router.get("/sessions")
+async def list_sessions(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    search: Optional[str] = Query(None),
+):
+    sessions = db.get_sessions(limit=limit, offset=offset, search=search)
+    for s in sessions:
+        s["title"] = _make_session_preview(s)
+    total = db.get_session_count(search=search)
+    return {"sessions": sessions, "total": total, "limit": limit, "offset": offset}
+
+@router.get("/sessions/{session_id}")
+async def get_session(session_id: str):
+    content = db.get_session_content(session_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return content
+
+@router.patch("/sessions/{session_id}")
+async def update_session_title(session_id: str, title: str = Query(...)):
+    success = db.update_session_title(session_id, title)
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"status": "updated", "session_id": session_id, "title": title}
+
+@router.delete("/sessions/{session_id}")
+async def delete_session(session_id: str):
+    success = db.delete_session(session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"status": "deleted", "session_id": session_id}
 
 @router.get("/setup/status")
 async def get_setup_status():

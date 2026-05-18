@@ -311,9 +311,10 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
                             text_content = f.read()
 
                         # Save to database
+                        filename = Path(file_path).name
                         db.add_transcription(
                             session_id=session_id,
-                            filename=Path(file_path).name,
+                            filename=filename,
                             file_path=file_path,
                             text_content=text_content,
                             model_size=model_size,
@@ -321,6 +322,8 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
                             device=actual_device,
                             duration_seconds=metadata.get("duration") if metadata else None,
                         )
+
+                        db.ensure_session(session_id)
 
                         await websocket.send_json({
                             "type": "result",
@@ -417,8 +420,10 @@ Context:
 
         await websocket.send_json({"type": "status", "message": "Thinking..."})
 
-        # Generate stream
+        # Generate stream and collect full response
+        full_response = ""
         async for token in llm_manager.generate_stream(system_prompt, question, cancel_event, chat_model):
+            full_response += token
             await websocket.send_json({"type": "token", "content": token})
             # Also listen for stop commands without blocking
             try:
@@ -432,6 +437,13 @@ Context:
 
         if not cancel_event.is_set():
             await websocket.send_json({"type": "done"})
+            # Save chat to database
+            messages = [
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": full_response},
+            ]
+            db.save_chat_session(session_id, chat_model, messages)
+            db.ensure_session(session_id)
 
     except WebSocketDisconnect:
         logger.info(f"Chat WebSocket disconnected for session {session_id}")
