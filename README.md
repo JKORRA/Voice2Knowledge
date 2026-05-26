@@ -2,6 +2,8 @@
 
 A privacy-first local audio transcription tool. All processing happens on your device - your audio never leaves your machine.
 
+<img src="assets/voice2knowledge.gif" alt="Voice2Knowledge demo">
+
 ---
 
 ## Quick Start
