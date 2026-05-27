@@ -1,6 +1,6 @@
 # Voice2Knowledge
 
-A privacy-first local audio transcription tool. All processing happens on your device - your audio never leaves your machine.
+A privacy-first local audio transcription and chat tool. All processing happens on your device — your audio never leaves your machine. Ask questions about your transcriptions using a fully local LLM.
 
 <img src="assets/voice2knowledge.gif" alt="Voice2Knowledge demo">
 
@@ -154,6 +154,33 @@ pyinstaller app.spec --clean -y
 - **GPU Acceleration**: Auto-detects GPU for faster transcription, falls back to CPU
 - **History & Export**: TXT, PDF, DOCX export
 - **Chat with Transcriptions**: Local LLM integration
+
+---
+
+## Chat with Your Transcriptions
+
+After transcribing audio, you can ask questions about the content — the LLM runs 100% locally, so your data never leaves your machine.
+
+### How It Works
+
+1. **Transcribe** one or more audio files
+2. **Select context** — choose which transcriptions to include in the conversation (or use all)
+3. **Ask questions** in natural language about the content
+4. The LLM answers using **only** the selected transcription context
+
+### Context Selection
+
+When multiple files are transcribed in a session, use the context selector to pick which ones the LLM should reference. This keeps answers focused on the relevant material and avoids mixing unrelated content.
+
+### Available Models
+
+All models are downloaded on demand when first selected. Switch anytime in **Settings** → Chat Model.
+
+| Model | Size | Default |
+|-------|------|---------|
+| Qwen 2.5 3B Instruct | ~1.8 GB | ✅ Default |
+| Llama 3.2 1B Instruct | ~0.7 GB | |
+| Phi 3.5 Mini Instruct | ~2.2 GB | |
 
 ---
 

@@ -1,15 +1,14 @@
 import { motion } from 'framer-motion';
-import { Bot, FileText, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bot, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { getOriginalFilename } from '../lib/utils';
 
 interface ResultMessageProps {
   file: string;
   content: string;
-  txtPath?: string;
 }
 
-export function ResultMessage({ file, content, txtPath }: ResultMessageProps) {
+export function ResultMessage({ file, content }: ResultMessageProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -49,13 +48,6 @@ export function ResultMessage({ file, content, txtPath }: ResultMessageProps) {
       console.error('Copy failed:', err);
       // Silent fail - do not crash
     }
-  };
-
-  const handleDownload = (path: string) => {
-    const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? window.location.host
-      : '127.0.0.1:8000';
-    window.open(`http://${host}/api/download?path=${encodeURIComponent(path)}`, '_blank');
   };
 
   return (
@@ -103,25 +95,14 @@ export function ResultMessage({ file, content, txtPath }: ResultMessageProps) {
         )}
 
         <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
-          {txtPath && (
-            <>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
-                title="Copy to clipboard"
-              >
-                {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-              <button
-                onClick={() => handleDownload(txtPath)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
-              >
-                <FileText size={14} />
-                Text
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
+            title="Copy to clipboard"
+          >
+            {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
+            {copied ? "Copied" : "Copy"}
+          </button>
         </div>
       </div>
     </motion.div>

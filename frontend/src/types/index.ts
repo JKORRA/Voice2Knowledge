@@ -8,7 +8,6 @@ export interface Message {
   type?: "text" | "progress" | "result" | "error" | "cancelled";
   file?: string;
   percent?: number;
-  txtPath?: string;
   files?: { names: string[] };
 }
 

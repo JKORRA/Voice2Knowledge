@@ -263,17 +263,18 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
             if cancel_event.is_set():
                 break
 
+            filename = Path(file_path).name
             await websocket.send_json({
                 "type": "progress",
-                "file": file_path,
+                "file": filename,
                 "percent": 0,
-                "message": f"Starting {Path(file_path).name}..."
+                "message": f"Starting {filename}..."
             })
 
             def progress_callback(percent, partial_text):
                 loop.call_soon_threadsafe(progress_queue.put_nowait, {
                     "type": "progress",
-                    "file": file_path,
+                    "file": filename,
                     "percent": percent,
                     "partial": partial_text
                 })
@@ -327,9 +328,8 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
 
                         await websocket.send_json({
                             "type": "result",
-                            "file": file_path,
                             "text": text_content,
-                            "txt_path": clean_txt
+                            "file": filename
                         })
                     except Exception as e:
                         logger.error(f"Error reading transcription output: {e}")
@@ -366,6 +366,10 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
         active_sessions.pop(session_id, None)
         await transcriber_instance.unload_model()
         app_state.end_transcription()
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 @router.websocket("/ws/chat/{session_id}")
 async def chat_ws(websocket: WebSocket, session_id: str):

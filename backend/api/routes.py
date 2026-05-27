@@ -3,7 +3,6 @@ import uuid
 from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
-from fastapi.responses import FileResponse
 
 from backend.core.config import settings
 from backend.core.database import db
@@ -14,8 +13,9 @@ TEMP_DIR = settings.output_dir / "temp_uploads"
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/upload")
-async def upload_files(files: List[UploadFile] = File(...)):
-    session_id = str(uuid.uuid4())
+async def upload_files(files: List[UploadFile] = File(...), session_id: Optional[str] = None):
+    if not session_id:
+        session_id = str(uuid.uuid4())
     saved_files = []
     
     for file in files:
@@ -34,18 +34,6 @@ async def upload_files(files: List[UploadFile] = File(...)):
         saved_files.append(str(dest_path))
         
     return {"session_id": session_id, "files": saved_files}
-
-@router.get("/download")
-async def download_file(path: str):
-    file_path = Path(path)
-    if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
-        
-    # Prevent directory traversal
-    if not str(file_path.resolve()).startswith(str(settings.output_dir.resolve())):
-        raise HTTPException(status_code=403, detail="Access denied")
-        
-    return FileResponse(path=file_path, filename=file_path.name)
 
 @router.get("/settings")
 async def get_settings():

@@ -75,7 +75,8 @@ export default function App() {
     });
 
     try {
-      const res = await fetch(`http://${host}/api/upload`, {
+      const uploadUrl = sessionId ? `http://${host}/api/upload?session_id=${sessionId}` : `http://${host}/api/upload`;
+      const res = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });
@@ -137,7 +138,7 @@ export default function App() {
         type: 'result',
         content: t.text_content || '',
         file: t.filename,
-        txtPath: t.file_path,
+
       });
     }
     for (const msg of data.chats) {
@@ -179,7 +180,6 @@ export default function App() {
             key={msg.id}
             file={msg.file || ''}
             content={msg.content}
-            txtPath={msg.txtPath}
           />
         );
       case 'error':
@@ -234,6 +234,7 @@ export default function App() {
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
         onLoadSession={handleLoadSession}
+        currentSessionId={sessionId}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">

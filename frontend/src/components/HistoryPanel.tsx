@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Clock, Loader2, MessageSquare, FileText, Trash2, Pencil, Check, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useChatStore } from '../stores/chatStore';
 
 interface Session {
   id: number;
@@ -17,9 +18,10 @@ interface HistoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onLoadSession: (sessionId: string) => void;
+  currentSessionId: string | null;
 }
 
-export function HistoryPanel({ isOpen, onClose, onLoadSession }: HistoryPanelProps) {
+export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId }: HistoryPanelProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -64,6 +66,10 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession }: HistoryPanelPro
     if (!confirm('Delete this session and all its data?')) return;
     try {
       await fetch(`http://${host}/api/sessions/${sessionId}`, { method: 'DELETE' });
+      if (sessionId === currentSessionId) {
+        useChatStore.getState().clearMessages();
+        useChatStore.getState().setSessionId(null);
+      }
       fetchSessions();
     } catch (err) {
       console.error('Failed to delete session:', err);

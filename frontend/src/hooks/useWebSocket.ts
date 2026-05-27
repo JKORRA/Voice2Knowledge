@@ -1,8 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useChatStore } from '../stores/chatStore';
 
 export const useWebSocket = (sessionId: string | null) => {
   const ws = useRef<WebSocket | null>(null);
+  const [wsKey, setWsKey] = useState(0);
   const { 
     setConnectionStatus, 
     setTranscribingStatus,
@@ -68,7 +69,7 @@ export const useWebSocket = (sessionId: string | null) => {
                     type: 'result' as const,
                     content: data.text,
                     isStreaming: false,
-                    txtPath: data.txt_path
+
                   };
                 }
                 return m;
@@ -135,17 +136,35 @@ export const useWebSocket = (sessionId: string | null) => {
         ws.current.close();
       }
     };
-  }, [sessionId, setConnectionStatus, setTranscribingStatus]);
+  }, [sessionId, wsKey, setConnectionStatus, setTranscribingStatus]);
 
   const sendFiles = useCallback((files: string[]) => {
+    const doSend = () => {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({
+          files,
+          ...settings
+        }));
+        setTranscribingStatus(true);
+      }
+    };
+
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({
-        files,
-        ...settings
-      }));
-      setTranscribingStatus(true);
+      doSend();
+    } else if (sessionId) {
+      setWsKey(k => k + 1);
+      let attempts = 0;
+      const poll = () => {
+        attempts++;
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+          doSend();
+        } else if (attempts < 50) {
+          setTimeout(poll, 100);
+        }
+      };
+      setTimeout(poll, 50);
     }
-  }, [settings, setTranscribingStatus]);
+  }, [sessionId, settings, setTranscribingStatus]);
 
   const cancelTranscription = useCallback(async () => {
     if (sessionId) {
