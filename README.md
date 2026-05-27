@@ -2,7 +2,9 @@
 
 A privacy-first local audio transcription and chat tool. All processing happens on your device — your audio never leaves your machine. Ask questions about your transcriptions using a fully local LLM.
 
-<img src="assets/voice2knowledge.gif" alt="Voice2Knowledge demo">
+<div style="text-align: center;">
+  <img src="assets/voice2knowledge.gif" alt="Voice2Knowledge demo" width="500">
+</div>
 
 ---
 
