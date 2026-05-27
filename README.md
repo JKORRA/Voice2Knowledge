@@ -5,7 +5,6 @@ A privacy-first local audio transcription and chat tool. All processing happens 
 <p align="center">
   <img src="assets/voice2knowledge.gif" alt="Voice2Knowledge demo" width="500">
 </p>
----
 
 ## Quick Start
 
