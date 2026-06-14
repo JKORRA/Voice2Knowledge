@@ -33,6 +33,7 @@ export const useChatWebSocket = (sessionId: string | null) => {
               role: 'assistant',
               type: 'text',
               content: '',
+              isStreaming: true
             });
             break;
 
@@ -54,11 +55,25 @@ export const useChatWebSocket = (sessionId: string | null) => {
 
           case 'done':
             setGeneratingStatus(false);
+            if (currentMessageId.current) {
+              useChatStore.setState(state => ({
+                messages: state.messages.map(m => 
+                  m.id === currentMessageId.current ? { ...m, isStreaming: false } : m
+                )
+              }));
+            }
             currentMessageId.current = null;
             break;
 
           case 'error':
             setGeneratingStatus(false);
+            if (currentMessageId.current) {
+              useChatStore.setState(state => ({
+                messages: state.messages.map(m => 
+                  m.id === currentMessageId.current ? { ...m, isStreaming: false } : m
+                )
+              }));
+            }
             currentMessageId.current = null;
             if (data.message === "System is currently transcribing. Please wait.") return;
             addMessage({

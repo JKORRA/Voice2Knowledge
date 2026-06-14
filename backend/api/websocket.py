@@ -411,38 +411,83 @@ async def chat_ws(websocket: WebSocket, session_id: str):
         from collections import Counter
         import re
 
-        def compute_tf_idf_chunks(q, text, chunk_size=300, overlap=50, top_k=5):
-            if not text: return ""
-            def tokenize(t): return re.findall(r'\w+', t.lower())
-            q_tokens = set(tokenize(q))
-            if not q_tokens: return text[:2000]
+        # --- Smart Context Allocation Engine ---
+        # Simple token estimation heuristic (words * 1.5 approx tokens for safety)
+        def estimate_tokens(text: str) -> int:
+            if not text: return 0
+            return int(len(text.split()) * 1.5)
 
-            words = text.split()
-            chunks = []
-            for i in range(0, len(words), chunk_size - overlap):
-                chunks.append(" ".join(words[i:i + chunk_size]))
+        MAX_CONTEXT_TOKENS = 8192
+        RESPONSE_RESERVE = 1000
+        SYSTEM_OVERHEAD = 100 # Approx tokens for system prompt instructions
 
-            if len(chunks) <= top_k: return text
+        full_context_tokens = estimate_tokens(context_text)
+        question_tokens = estimate_tokens(question)
 
-            df = Counter()
-            chunk_tokens = [tokenize(c) for c in chunks]
-            for tokens in chunk_tokens:
-                for t in set(tokens).intersection(q_tokens): df[t] += 1
+        # Calculate available budget for RAG vs History
+        available_space_for_context = MAX_CONTEXT_TOKENS - RESPONSE_RESERVE - question_tokens - SYSTEM_OVERHEAD
+        MIN_HISTORY_RESERVE = 500 # Leave at least 500 tokens for chat history
+        
+        target_rag_budget = available_space_for_context - MIN_HISTORY_RESERVE
+
+        if full_context_tokens <= target_rag_budget:
+            # Full-Text Bypass: The entire transcript fits comfortably in our RAG budget!
+            relevant_context = context_text
+            logger.info(f"Smart RAG: Full text bypass used. Context size: {full_context_tokens} tokens")
+        else:
+            # Dynamic Chunk Scaling
+            chunk_token_size = 450 # Approx 300 words * 1.5
+            max_chunks = max(3, target_rag_budget // chunk_token_size)
             
-            N = len(chunks)
-            idf = {t: math.log(N / (df[t] + 1)) + 1 for t in df}
-            
-            scores = []
-            for idx, tokens in enumerate(chunk_tokens):
-                score = sum(Counter(tokens)[qt] * idf.get(qt, 0) for qt in q_tokens)
-                scores.append((score, chunks[idx]))
+            def compute_smart_chunks(q, text, max_k):
+                def tokenize(t): return re.findall(r'\w+', t.lower())
+                q_tokens = set(tokenize(q))
                 
-            scores.sort(key=lambda x: x[0], reverse=True)
-            best = [c for s, c in scores[:top_k] if s > 0]
-            if not best: return chunks[0] + "\n...\n" + chunks[-1]
-            return "\n...\n".join(best)
+                # Filter out common stop words to prevent false TF-IDF matches on queries like "make me a summary"
+                stop_words = {"a", "an", "the", "is", "are", "and", "or", "to", "in", "on", "of", "for", "with", "me", "my", "i", "you", "it", "this", "that", "make", "can", "do", "what", "how", "why"}
+                meaningful_q_tokens = q_tokens - stop_words
+                
+                words = text.split()
+                chunk_size = 300
+                overlap = 50
+                chunks = []
+                for i in range(0, len(words), chunk_size - overlap):
+                    chunks.append(" ".join(words[i:i + chunk_size]))
 
-        relevant_context = compute_tf_idf_chunks(question, context_text)
+                if len(chunks) <= max_k: return text
+
+                if not meaningful_q_tokens: 
+                    # Holistic Sampling (No meaningful keyword match)
+                    step = len(chunks) / max_k
+                    return "\n...\n".join(chunks[int(i*step)] for i in range(max_k))
+
+                df = Counter()
+                chunk_tokens = [tokenize(c) for c in chunks]
+                for tokens in chunk_tokens:
+                    for t in set(tokens).intersection(meaningful_q_tokens): df[t] += 1
+                
+                N = len(chunks)
+                idf = {t: math.log(N / (df[t] + 1)) + 1 for t in df}
+                
+                scores = []
+                for idx, tokens in enumerate(chunk_tokens):
+                    score = sum(Counter(tokens)[qt] * idf.get(qt, 0) for qt in meaningful_q_tokens)
+                    scores.append((score, idx, chunks[idx])) # Store chronological index
+                    
+                scores.sort(key=lambda x: x[0], reverse=True)
+                
+                # If the best score is 0, it means no keywords matched (e.g. they just said "summary")
+                if not scores or scores[0][0] == 0:
+                    step = len(chunks) / max_k
+                    return "\n...\n".join(chunks[int(i*step)] for i in range(max_k))
+                
+                # Take top max_k chunks and SORT THEM CHRONOLOGICALLY before sending to LLM!
+                best_items = scores[:max_k]
+                best_items.sort(key=lambda x: x[1])
+                return "\n...\n".join(item[2] for item in best_items)
+
+            relevant_context = compute_smart_chunks(question, context_text, max_chunks)
+            logger.info(f"Smart RAG: Dynamic chunking used. Max chunks allowed: {max_chunks}")
 
         system_prompt = f"You are an AI assistant. Answer the user's question using ONLY the provided transcription context. Do not make up answers.\n\nContext:\n{relevant_context}"
 
@@ -457,19 +502,9 @@ async def chat_ws(websocket: WebSocket, session_id: str):
 
         full_response = ""
         
-        # --- Advanced Token-Aware Dynamic Memory ---
-        # Simple token estimation heuristic (words * 1.5 approx tokens for safety)
-        def estimate_tokens(text: str) -> int:
-            if not text: return 0
-            return int(len(text.split()) * 1.5)
-
-        # Token Budgeting (Assuming standard 8192 context window for Llama 3 / modern models)
-        MAX_CONTEXT_TOKENS = 8192
-        RESPONSE_RESERVE = 1000
-        
         system_tokens = estimate_tokens(system_prompt)
-        question_tokens = estimate_tokens(question)
         
+        # Calculate exactly how much space is left for history after actual RAG allocation
         available_history_tokens = MAX_CONTEXT_TOKENS - RESPONSE_RESERVE - system_tokens - question_tokens
         
         # Build history from newest to oldest within the mathematical budget
@@ -480,15 +515,13 @@ async def chat_ws(websocket: WebSocket, session_id: str):
             msg_content = msg.get("content", "")
             msg_tokens = estimate_tokens(msg_content)
             
-            # If adding this message exceeds our safe budget, we stop remembering further back
             if current_history_tokens + msg_tokens > available_history_tokens:
                 break
                 
-            # Insert at beginning to maintain correct chronological order for the prompt
             dynamic_history.insert(0, msg)
             current_history_tokens += msg_tokens
 
-        logger.info(f"Memory Manager: Packed {len(dynamic_history)} past messages ({current_history_tokens} tokens). System RAG: {system_tokens} tokens. Available Budget: {available_history_tokens}")
+        logger.info(f"Memory Manager: Packed {len(dynamic_history)} past messages ({current_history_tokens} tokens). System RAG: {system_tokens} tokens. Available History Budget: {available_history_tokens}")
         
         messages_payload = [{"role": "system", "content": system_prompt}]
         for msg in dynamic_history:

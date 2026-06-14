@@ -74,14 +74,6 @@ export function ResultMessage({ file, content }: ResultMessageProps) {
           <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-[var(--foreground)]">
             {displayContent}
           </pre>
-
-          <button
-            onClick={handleCopy}
-            className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[var(--button-secondary-hover)] transition-all"
-            title="Copy text"
-          >
-            {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
-          </button>
         </div>
 
         {isLong && (

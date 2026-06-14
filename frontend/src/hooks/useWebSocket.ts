@@ -74,7 +74,7 @@ export const useWebSocket = (sessionId: string | null) => {
                 }
                 return m;
               });
-              return { messages, isTranscribing: false };
+              return { messages };
             });
             break;
 
@@ -100,7 +100,7 @@ export const useWebSocket = (sessionId: string | null) => {
                   content: `Error: ${data.message}`
                 });
               }
-              return { messages, isTranscribing: false };
+              return { messages };
             });
             break;
 
@@ -117,7 +117,7 @@ export const useWebSocket = (sessionId: string | null) => {
                 }
                 return m;
               });
-              return { messages, isTranscribing: false };
+              return { messages };
             });
             break;
         }

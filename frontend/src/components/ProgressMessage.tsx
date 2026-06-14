@@ -6,9 +6,10 @@ interface ProgressMessageProps {
   file: string;
   percent: number;
   content?: string;
+  title?: string;
 }
 
-export function ProgressMessage({ file, percent, content }: ProgressMessageProps) {
+export function ProgressMessage({ file, percent, content, title }: ProgressMessageProps) {
   const isDownloading = file === 'setup' || file === 'llm_setup';
   
   let fileName = getOriginalFilename(file);
@@ -30,7 +31,7 @@ export function ProgressMessage({ file, percent, content }: ProgressMessageProps
       <div className="flex flex-col gap-3 max-w-[80%] px-4 py-3 rounded-2xl shadow-md bg-[var(--message-assistant-bg)] text-[var(--message-assistant-foreground)] rounded-tl-sm">
         <div className="flex items-center gap-2 text-[var(--accent)] font-medium">
           <AudioLines size={16} className="animate-pulse" />
-          <span className="text-sm">Transcribing</span>
+          <span className="text-sm">{title || 'Transcribing'}</span>
         </div>
 
         <div className="flex items-center gap-3">

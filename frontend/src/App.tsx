@@ -37,10 +37,25 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [showChatInput, setShowChatInput] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<{ paths: string[], names: string[] } | null>(null);
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const uploadAbortController = useRef<AbortController | null>(null);
+
+  const cancelUpload = () => {
+    if (uploadAbortController.current) {
+      uploadAbortController.current.abort();
+      uploadAbortController.current = null;
+    }
+    setPendingFiles(null);
+    setIsUploading(false);
+    if (messages.length === 0) {
+      setShowChatInput(false);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? window.location.host
@@ -62,21 +77,38 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    // If transcription just finished, we have a queued prompt, and at least one successful result
+    if (!isTranscribing && queuedPrompt && messages.some(m => m.type === 'result')) {
+      sendQuestion(queuedPrompt);
+      setQueuedPrompt(null);
+    }
+  }, [isTranscribing, queuedPrompt, messages, sendQuestion]);
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    setShowChatInput(true);
+    setPendingFiles({
+      paths: [],
+      names: Array.from(files).map(f => f.name)
+    });
+
     const formData = new FormData();
     Array.from(files).forEach((file) => {
       formData.append('files', file);
     });
+
+    uploadAbortController.current = new AbortController();
 
     try {
       const uploadUrl = sessionId ? `http://${host}/api/upload?session_id=${sessionId}` : `http://${host}/api/upload`;
       const res = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
+        signal: uploadAbortController.current.signal,
       });
 
       if (!res.ok) throw new Error('Upload failed');
@@ -89,29 +121,41 @@ export default function App() {
         names: Array.from(files).map(f => f.name)
       });
 
-    } catch (err) {
-      console.error(err);
-      addMessage({
-        role: 'assistant',
-        content: 'Failed to upload files. Please try again.',
-        type: 'error'
-      });
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log('Upload aborted');
+      } else {
+        console.error(err);
+        addMessage({
+          role: 'assistant',
+          content: 'Failed to upload files. Please try again.',
+          type: 'error'
+        });
+        setPendingFiles(null);
+        if (messages.length === 0) setShowChatInput(false);
+      }
     } finally {
       setIsUploading(false);
-      setShowChatInput(true);
+      uploadAbortController.current = null;
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleStartTranscription = () => {
+  const handleStartTranscription = (prompt: string) => {
     if (!pendingFiles) return;
+
+    const userMessage = prompt || 'Start the transcription';
 
     addMessage({
       role: 'user',
-      content: `Start the transcription`,
+      content: userMessage,
       type: 'text',
       files: { names: pendingFiles.names }
     });
+
+    if (prompt) {
+      setQueuedPrompt(prompt);
+    }
 
     sendFiles(pendingFiles.paths);
     setPendingFiles(null);
@@ -326,6 +370,8 @@ export default function App() {
                       onCancel={cancelGeneration}
                       onUploadClick={() => fileInputRef.current?.click()}
                       isGenerating={isGenerating}
+                      isUploading={isUploading}
+                      onClearPendingFiles={cancelUpload}
                       disabled={isTranscribing || (!sessionId && !pendingFiles)}
                     />
                   </div>

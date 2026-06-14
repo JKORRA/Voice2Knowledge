@@ -8,6 +8,7 @@ interface ChatMessageProps {
     content: string;
     role: 'user' | 'assistant';
     files?: { names: string[] };
+    isStreaming?: boolean;
   };
 }
 
@@ -16,9 +17,36 @@ export function ChatMessage({ msg }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      // 1. Detect if we are running inside pywebview
+      const isWebView = typeof window !== 'undefined' && (window as { pywebview?: unknown }).pywebview !== undefined;
+
+      // 2. Force the fallback if in pywebview, OR if secure context/clipboard API is missing
+      if (isWebView || !navigator.clipboard || !window.isSecureContext) {
+        const textArea = document.createElement("textarea");
+        textArea.value = content;
+        
+        // Prevent scrolling to bottom
+        textArea.style.position = "absolute";
+        textArea.style.left = "-999999px";
+        
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        return;
+      }
+
+      // 3. Normal browser behavior
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
   };
 
   return (
@@ -68,14 +96,17 @@ export function ChatMessage({ msg }: ChatMessageProps) {
           {msg.content}
         </pre>
 
-        {role === 'assistant' && (
-          <button
-            onClick={handleCopy}
-            className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[var(--button-secondary-hover)] transition-all"
-            title="Copy text"
-          >
-            {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
-          </button>
+        {role === 'assistant' && !msg.isStreaming && (
+          <div className="flex gap-2 pt-2 mt-2 border-t border-[var(--border)]">
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--glass-border)] transition-colors backdrop-blur-sm"
+              title="Copy to clipboard"
+            >
+              {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
         )}
       </div>
     </motion.div>
