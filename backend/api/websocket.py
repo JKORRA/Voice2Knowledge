@@ -389,31 +389,62 @@ async def chat_ws(websocket: WebSocket, session_id: str):
     try:
         data = await websocket.receive_json()
         question = data.get("question", "")
-        selected_files = data.get("selected_files", [])
         chat_model = data.get("chat_model", "qwen2.5-3b")
 
-        # Let's filter manually if DB method doesn't support session_id exactly
-        all_trans = db.get_transcriptions(limit=100)
-        session_trans = [t for t in all_trans if t.get('session_id') == session_id]
+        session_content = db.get_session_content(session_id)
+        if not session_content:
+            await websocket.send_json({"type": "error", "message": "No session found."})
+            cancel_event.set()
+            return
+            
+        transcriptions = session_content.get("transcriptions", [])
+        past_chats = session_content.get("chats", [])
         
-        # Filter by selected files if provided
-        if selected_files:
-            session_trans = [t for t in session_trans if t.get('file_path') in selected_files or t.get('filename') in selected_files]
-        
-        context_text = "\n\n".join([t.get('text_content', '') for t in session_trans if t.get('text_content')])
+        context_text = "\n\n".join([t.get('text_content', '') for t in transcriptions if t.get('text_content')])
         
         if not context_text:
-            if selected_files:
-                await websocket.send_json({"type": "error", "message": "No text found in the selected files."})
-            else:
-                await websocket.send_json({"type": "error", "message": "No transcriptions found for this session."})
+            await websocket.send_json({"type": "error", "message": "No transcriptions found for this session."})
             cancel_event.set()
             return
 
-        system_prompt = f"""[INST] You are an AI assistant. Answer the user's question using ONLY the provided transcription context. Do not make up answers.
-Context:
-{context_text}
-[/INST]"""
+        import math
+        from collections import Counter
+        import re
+
+        def compute_tf_idf_chunks(q, text, chunk_size=300, overlap=50, top_k=5):
+            if not text: return ""
+            def tokenize(t): return re.findall(r'\w+', t.lower())
+            q_tokens = set(tokenize(q))
+            if not q_tokens: return text[:2000]
+
+            words = text.split()
+            chunks = []
+            for i in range(0, len(words), chunk_size - overlap):
+                chunks.append(" ".join(words[i:i + chunk_size]))
+
+            if len(chunks) <= top_k: return text
+
+            df = Counter()
+            chunk_tokens = [tokenize(c) for c in chunks]
+            for tokens in chunk_tokens:
+                for t in set(tokens).intersection(q_tokens): df[t] += 1
+            
+            N = len(chunks)
+            idf = {t: math.log(N / (df[t] + 1)) + 1 for t in df}
+            
+            scores = []
+            for idx, tokens in enumerate(chunk_tokens):
+                score = sum(Counter(tokens)[qt] * idf.get(qt, 0) for qt in q_tokens)
+                scores.append((score, chunks[idx]))
+                
+            scores.sort(key=lambda x: x[0], reverse=True)
+            best = [c for s, c in scores[:top_k] if s > 0]
+            if not best: return chunks[0] + "\n...\n" + chunks[-1]
+            return "\n...\n".join(best)
+
+        relevant_context = compute_tf_idf_chunks(question, context_text)
+
+        system_prompt = f"You are an AI assistant. Answer the user's question using ONLY the provided transcription context. Do not make up answers.\n\nContext:\n{relevant_context}"
 
         if not llm_manager.is_model_downloaded(chat_model):
             await websocket.send_json({
@@ -424,9 +455,50 @@ Context:
 
         await websocket.send_json({"type": "status", "message": "Thinking..."})
 
-        # Generate stream and collect full response
         full_response = ""
-        async for token in llm_manager.generate_stream(system_prompt, question, cancel_event, chat_model):
+        
+        # --- Advanced Token-Aware Dynamic Memory ---
+        # Simple token estimation heuristic (words * 1.5 approx tokens for safety)
+        def estimate_tokens(text: str) -> int:
+            if not text: return 0
+            return int(len(text.split()) * 1.5)
+
+        # Token Budgeting (Assuming standard 8192 context window for Llama 3 / modern models)
+        MAX_CONTEXT_TOKENS = 8192
+        RESPONSE_RESERVE = 1000
+        
+        system_tokens = estimate_tokens(system_prompt)
+        question_tokens = estimate_tokens(question)
+        
+        available_history_tokens = MAX_CONTEXT_TOKENS - RESPONSE_RESERVE - system_tokens - question_tokens
+        
+        # Build history from newest to oldest within the mathematical budget
+        dynamic_history = []
+        current_history_tokens = 0
+        
+        for msg in reversed(past_chats):
+            msg_content = msg.get("content", "")
+            msg_tokens = estimate_tokens(msg_content)
+            
+            # If adding this message exceeds our safe budget, we stop remembering further back
+            if current_history_tokens + msg_tokens > available_history_tokens:
+                break
+                
+            # Insert at beginning to maintain correct chronological order for the prompt
+            dynamic_history.insert(0, msg)
+            current_history_tokens += msg_tokens
+
+        logger.info(f"Memory Manager: Packed {len(dynamic_history)} past messages ({current_history_tokens} tokens). System RAG: {system_tokens} tokens. Available Budget: {available_history_tokens}")
+        
+        messages_payload = [{"role": "system", "content": system_prompt}]
+        for msg in dynamic_history:
+            messages_payload.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+        messages_payload.append({"role": "user", "content": question})
+
+        import json
+        logger.info(f"\n{'='*50}\nFULL LLM PROMPT PAYLOAD:\n{json.dumps(messages_payload, indent=2, ensure_ascii=False)}\n{'='*50}")
+
+        async for token in llm_manager.generate_stream(messages_payload, cancel_event, chat_model):
             full_response += token
             await websocket.send_json({"type": "token", "content": token})
             # Also listen for stop commands without blocking

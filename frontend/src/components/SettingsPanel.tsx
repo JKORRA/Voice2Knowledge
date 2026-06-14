@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Cpu, HardDrive, Sparkles, Database } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { X, Settings, Cpu, HardDrive, Sparkles, Database, Moon, Sun } from 'lucide-react';
 import type { Settings as SettingsType } from '../types';
 import { DownloadConfirmModal } from './DownloadConfirmModal';
 import { ModelManager } from './ModelManager';
+import { CustomSelect } from './CustomSelect';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -12,6 +12,8 @@ interface SettingsPanelProps {
   settings: SettingsType;
   onSettingsChange: (settings: Partial<SettingsType>) => void;
   isDisabled?: boolean;
+  resolvedTheme: 'light' | 'dark';
+  onThemeToggle: () => void;
 }
 
 const baseModelOptions = [
@@ -40,6 +42,8 @@ export function SettingsPanel({
   settings,
   onSettingsChange,
   isDisabled = false,
+  resolvedTheme,
+  onThemeToggle,
 }: SettingsPanelProps) {
   const [modelStatuses, setModelStatuses] = useState<Record<string, boolean>>({});
   
@@ -73,8 +77,7 @@ export function SettingsPanel({
     }
   }, [isOpen]);
 
-  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>, type: 'whisper' | 'chat') => {
-    const modelName = e.target.value;
+  const handleModelChange = (modelName: string, type: 'whisper' | 'chat') => {
     if (modelStatuses[modelName]) {
       // Already downloaded, just apply
       if (type === 'whisper') {
@@ -145,7 +148,7 @@ export function SettingsPanel({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -320, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 bottom-0 w-80 bg-[var(--card)] border-r border-[var(--border)] z-50 flex flex-col shadow-xl"
+            className="fixed left-4 top-4 bottom-4 w-80 rounded-2xl glass-panel-solid z-50 flex flex-col overflow-hidden border border-[var(--glass-border)]"
           >
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
@@ -161,74 +164,62 @@ export function SettingsPanel({
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <div className="p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--glass-border)] backdrop-blur-sm flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[var(--background)] rounded-lg shadow-sm border border-[var(--glass-border)]">
+                    {resolvedTheme === 'light' ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-[var(--accent)]" />}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-[var(--foreground)]">Appearance</span>
+                    <span className="text-xs text-[var(--foreground-tertiary)]">{resolvedTheme === 'light' ? 'Light Mode' : 'Dark Mode'}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={onThemeToggle}
+                  className="px-3 py-1.5 rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 text-xs font-bold transition-colors"
+                >
+                  Toggle
+                </button>
+              </div>
+
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                   <Sparkles size={16} className="text-[var(--accent)]" />
                   Transcription Model (Whisper)
                 </div>
-                <select
+                <CustomSelect
                   value={settings.model}
-                  onChange={(e) => handleModelChange(e, 'whisper')}
+                  onChange={(val) => handleModelChange(val, 'whisper')}
+                  options={modelOptions}
                   disabled={isDisabled}
-                  className={cn(
-                    'w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground)] text-sm',
-                    'focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-colors',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
-                >
-                  {modelOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label} ({opt.status}) - {opt.description}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                   <Sparkles size={16} className="text-[var(--accent)]" />
                   Chat Model (Generative AI)
                 </div>
-                <select
+                <CustomSelect
                   value={settings.chatModel}
-                  onChange={(e) => handleModelChange(e, 'chat')}
+                  onChange={(val) => handleModelChange(val, 'chat')}
+                  options={chatModelOptions}
                   disabled={isDisabled}
-                  className={cn(
-                    'w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground)] text-sm',
-                    'focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-colors',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
-                >
-                  {chatModelOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label} ({opt.status}) - {opt.description}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                   <Cpu size={16} className="text-[var(--accent)]" />
                   Device
                 </div>
-                <select
+                <CustomSelect
                   value={settings.device}
-                  onChange={(e) => onSettingsChange({ device: e.target.value })}
+                  onChange={(val) => onSettingsChange({ device: val })}
+                  options={deviceOptions}
                   disabled={isDisabled}
-                  className={cn(
-                    'w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground)] text-sm',
-                    'focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-colors',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
-                >
-                  {deviceOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label} - {opt.description}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
-              <div className="p-4 rounded-lg bg-[var(--background-secondary)] border border-[var(--border)]">
+              <div className="p-4 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--glass-border)] backdrop-blur-sm">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)] mb-2">
                   <HardDrive size={16} className="text-[var(--foreground-secondary)]" />
                   <span>Compute Type</span>
@@ -239,10 +230,10 @@ export function SettingsPanel({
               </div>
             </div>
 
-            <div className="p-4 border-t border-[var(--border)] flex flex-col gap-3">
+            <div className="p-4 border-t border-white/10 flex flex-col gap-3">
               <button
                 onClick={() => setIsModelManagerOpen(true)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-[var(--border)] hover:bg-[var(--background-secondary)] text-[var(--foreground)] text-sm font-medium transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)] text-sm font-medium transition-colors backdrop-blur-sm"
               >
                 <Database size={16} className="text-[var(--accent)]" />
                 Manage Local Models

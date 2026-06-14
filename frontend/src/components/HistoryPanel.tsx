@@ -131,7 +131,7 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId 
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 320, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-96 bg-[var(--card)] border-l border-[var(--border)] z-50 flex flex-col shadow-xl"
+            className="fixed right-4 top-4 bottom-4 w-96 rounded-2xl glass-panel-solid z-50 flex flex-col overflow-hidden border border-[var(--glass-border)]"
           >
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId 
               </button>
             </div>
 
-            <div className="p-4 border-b border-[var(--border)]">
+            <div className="p-4 border-b border-white/10">
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--foreground-tertiary)]" />
                 <input
@@ -154,7 +154,7 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId 
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
                   placeholder="Search sessions..."
-                  className="w-full pl-9 pr-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground)] text-sm focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20"
+                  className="w-full pl-9 pr-4 py-2 rounded-lg border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 text-[var(--foreground)] text-sm focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 backdrop-blur-sm"
                 />
               </div>
             </div>
@@ -170,12 +170,12 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId 
                   <p>No sessions yet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-[var(--border)]">
+                <div className="divide-y divide-white/10">
                   {sessions.map((s) => (
                     <div
                       key={s.session_id}
                       onClick={() => { onLoadSession(s.session_id); onClose(); }}
-                      className="p-4 hover:bg-[var(--background-secondary)] cursor-pointer transition-colors group"
+                      className="p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors group"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -186,7 +186,7 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId 
                                 value={editTitle}
                                 onChange={(e) => setEditTitle(e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(e, s.session_id)}
-                                className="flex-1 px-2 py-0.5 text-sm rounded border border-[var(--accent)] bg-[var(--background)] text-[var(--foreground)] outline-none"
+                                className="flex-1 px-2 py-0.5 text-sm rounded border border-[var(--accent)] bg-black/10 dark:bg-white/10 text-[var(--foreground)] outline-none"
                                 onClick={(e) => e.stopPropagation()}
                               />
                               <button onClick={(e) => { e.stopPropagation(); handleSaveTitle(s.session_id); }} className="p-1 text-[var(--success)] hover:bg-[var(--success)]/10 rounded">
@@ -239,11 +239,11 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId 
             </div>
 
             {total > limit && (
-              <div className="p-4 border-t border-[var(--border)] flex items-center justify-between">
+              <div className="p-4 border-t border-white/10 flex items-center justify-between">
                 <button
                   onClick={() => setOffset(Math.max(0, offset - limit))}
                   disabled={offset === 0}
-                  className="px-3 py-1.5 text-sm rounded border border-[var(--border)] hover:bg-[var(--button-secondary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 text-sm rounded border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                 >
                   Previous
                 </button>
@@ -253,7 +253,7 @@ export function HistoryPanel({ isOpen, onClose, onLoadSession, currentSessionId 
                 <button
                   onClick={() => setOffset(offset + limit)}
                   disabled={offset + limit >= total}
-                  className="px-3 py-1.5 text-sm rounded border border-[var(--border)] hover:bg-[var(--button-secondary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 text-sm rounded border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                 >
                   Next
                 </button>

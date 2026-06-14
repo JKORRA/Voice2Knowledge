@@ -1,10 +1,20 @@
 # Voice2Knowledge
 
-A privacy-first local audio transcription and chat tool. All processing happens on your device — your audio never leaves your machine. Ask questions about your transcriptions using a fully local LLM.
+A premium, privacy-first local audio transcription and AI assistant. All processing happens entirely on your device — your audio and conversations never leave your machine. Transcribe files and chat naturally with a fully local LLM that intelligently remembers your conversations and references your transcriptions.
 
 <p align="center">
   <img src="assets/voice2knowledge.gif" alt="Voice2Knowledge demo" width="600">
 </p>
+
+## Key Features
+- **Privacy First**: 100% offline, local processing. Your data is yours.
+- **Premium UI/UX**: Beautiful, responsive glassmorphism interface with fluid animations and automatic Light/Dark mode syncing.
+- **Advanced AI Memory**: Features a ChatGPT-style Token-Aware Dynamic Memory system. It mathematically balances context limits to remember dozens of previous chat messages seamlessly without crashing.
+- **Automatic RAG Engine**: Uses a pure-Python TF-IDF engine to instantly chunk and retrieve the most relevant pieces of your transcriptions based on your questions. No manual context selection required!
+- **GPU Acceleration**: Auto-detects NVIDIA GPUs (via `ctranslate2` & `nvidia-smi`) for lightning-fast transcription, or gracefully falls back to CPU processing.
+- **History & Export**: Saves all your sessions. Export your transcriptions to TXT, PDF, or DOCX.
+
+---
 
 ## Quick Start
 
@@ -14,7 +24,7 @@ A privacy-first local audio transcription and chat tool. All processing happens 
 
 ### For Developers
 - Clone repo, then run: `./build.sh` (Linux/macOS) or `build.bat` (Windows)
-- Output in dist/Voice2Knowledge/
+- Output in `dist/Voice2Knowledge/`
 
 ---
 
@@ -42,7 +52,7 @@ A privacy-first local audio transcription and chat tool. All processing happens 
 
 ### Option A: Desktop App (Recommended)
 - Pre-built: Download from Releases
-- From source: `python src/launcher.py` (after setup)
+- From source: `python src/launcher.py` (Starts a native desktop window)
 
 ### Option B: Web UI (Development Mode)
 Two ways to run:
@@ -62,6 +72,77 @@ Perfect for batch processing or servers. Full guide in `guide.md`.
 
 ---
 
+## Chat with Your Transcriptions
+
+After transcribing audio, you can ask questions about the content. The LLM runs 100% locally.
+
+### How It Works Under the Hood
+
+1. **Transcribe** one or more audio files.
+2. **Ask questions** in natural language about the content.
+3. **Retrieval-Augmented Generation (RAG)**: The backend automatically scans all your session transcriptions, chunks them, and uses a TF-IDF algorithm to inject the most relevant paragraphs into the AI's prompt. 
+4. **Dynamic Context**: The Token-Aware Memory system perfectly balances your transcription chunks with your previous chat messages, ensuring smooth, continuous conversation without losing context.
+
+### Available Models
+
+All models are downloaded on demand when first selected. Switch anytime in **Settings** → Manage Local Models.
+
+**Whisper** (transcription, via faster-whisper):
+| Size | Default |
+|------|---------|
+| `tiny`, `base` | |
+| `small` | ✅ Default |
+| `medium`, `large-v3` | |
+
+**LLM** (chat, via llama.cpp — all GGUF Q4_K_M):
+| Model | Size | Default |
+|-------|------|---------|
+| Qwen 2.5 3B Instruct | ~1.8 GB | ✅ Default |
+| Llama 3.2 1B Instruct | ~0.7 GB | |
+| Phi 3.5 Mini Instruct | ~2.2 GB | |
+
+---
+
+## Tech Stack
+
+### Backend
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) + Uvicorn (REST API + WebSocket real-time)
+- **Transcription**: [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) (CTranslate2-optimized Whisper, no PyTorch)
+- **Local LLM**: [`llama-cpp-python`](https://github.com/abetlen/llama-cpp-python) (GGUF quantized models)
+- **Database**: SQLite (transcription & chat history, no external DB server needed)
+- **Desktop Wrapper**: [pywebview](https://pywebview.flowrl.com/) + PyQt6
+- **Export**: TXT, PDF ([fpdf2](https://github.com/andreax79/fpdf2)), DOCX ([python-docx](https://github.com/python-openxml/python-docx))
+
+### Frontend
+- **UI**: React 19 + TypeScript 6 + Vite 8
+- **Styling**: Tailwind CSS 3
+- **State**: Zustand
+- **Animation**: framer-motion
+- **Icons**: lucide-react
+
+### Build
+- **Packaging**: PyInstaller (`torch` excluded for smaller bundle, ~200-300 MB)
+- **CLI**: Standalone `script.py` for batch processing
+
+---
+
+## Project Structure
+```
+Voice2Knowledge/
+├── backend/
+│   ├── main.py              # FastAPI entry
+│   ├── api/                 # Routes and WebSockets (RAG Engine)
+│   └── core/                # Transcriber, LLM manager, GPU utils, DB
+├── frontend/                # React + Vite UI
+├── src/                     # Desktop launcher wrapper (launcher.py)
+├── script.py                # Lightweight CLI tool
+├── build.sh/.bat            # Build scripts
+├── app.spec                 # PyInstaller configuration
+└── guide.md                 # CLI usage guide
+```
+
+---
+
 ## Building from Source
 
 ### Prerequisites
@@ -76,133 +157,14 @@ Perfect for batch processing or servers. Full guide in `guide.md`.
 # Windows
 build.bat
 ```
-Output: `dist/Voice2Knowledge/`
-
-### Manual Build
-```bash
-# 1. Create venv
-python -m venv venv
-
-# 2. Activate venv
-# Linux/macOS
-source venv/bin/activate
-
-# Windows (PowerShell)
-.\venv\Scripts\Activate.ps1
-
-# Windows (CMD)
-.\venv\Scripts\Activate.bat
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Build frontend
-cd frontend && npm install && npm run build && cd ..
-
-# 5. Package
-pip install pyinstaller
-pyinstaller app.spec --clean -y
-```
-
----
-
-## Tech Stack
-
-### Backend
-- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) + Uvicorn (REST API + WebSocket real-time)
-- **Transcription**: [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) (CTranslate2-optimized Whisper, no PyTorch)
-- **Local LLM**: [`llama-cpp-python`](https://github.com/abetlen/llama-cpp-python) (GGUF quantized models)
-- **Database**: SQLite (transcription & chat history, no external DB server needed)
-- **GPU Detection**: Lightweight probe via ctranslate2 + nvidia-smi fallback (zero torch dependency)
-- **Desktop Wrapper**: [pywebview](https://pywebview.flowrl.com/) + PyQt6
-- **Export**: TXT, PDF ([fpdf2](https://github.com/andreax79/fpdf2)), DOCX ([python-docx](https://github.com/python-openxml/python-docx))
-
-### Frontend
-- **UI**: React 19 + TypeScript 6 + Vite 8
-- **Styling**: Tailwind CSS 3
-- **State**: Zustand
-- **Animation**: framer-motion
-- **Icons**: lucide-react
-
-### Models
-
-**Whisper** (transcription, via faster-whisper):
-
-| Size | Default |
-|------|---------|
-| `tiny`, `base` | |
-| `small` | ✅ Default |
-| `medium`, `large-v3` | |
-
-**LLM** (chat, via llama.cpp — all GGUF Q4_K_M):
-
-| Model | Size | Default |
-|-------|------|---------|
-| Qwen 2.5 3B Instruct | ~1.8 GB | ✅ Default |
-| Llama 3.2 1B Instruct | ~0.7 GB | |
-| Phi 3.5 Mini Instruct | ~2.2 GB | |
-
-### Build
-- **Packaging**: PyInstaller (`torch` excluded for smaller bundle, ~200-300 MB)
-- **CLI**: Standalone `script.py` for batch processing
-
----
-
-## Key Features
-- **Privacy First**: All local, audio never leaves your device
-- **Cross-Platform**: Windows, macOS, Linux
-- **GPU Acceleration**: Auto-detects GPU for faster transcription, falls back to CPU
-- **History & Export**: TXT, PDF, DOCX export
-- **Chat with Transcriptions**: Local LLM integration
-
----
-
-## Chat with Your Transcriptions
-
-After transcribing audio, you can ask questions about the content — the LLM runs 100% locally, so your data never leaves your machine.
-
-### How It Works
-
-1. **Transcribe** one or more audio files
-2. **Select context** — choose which transcriptions to include in the conversation (or use all)
-3. **Ask questions** in natural language about the content
-4. The LLM answers using **only** the selected transcription context
-
-### Context Selection
-
-When multiple files are transcribed in a session, use the context selector to pick which ones the LLM should reference. This keeps answers focused on the relevant material and avoids mixing unrelated content.
-
-### Available Models
-
-All models are downloaded on demand when first selected. Switch anytime in **Settings** → Chat Model.
-
-| Model | Size | Default |
-|-------|------|---------|
-| Qwen 2.5 3B Instruct | ~1.8 GB | ✅ Default |
-| Llama 3.2 1B Instruct | ~0.7 GB | |
-| Phi 3.5 Mini Instruct | ~2.2 GB | |
-
----
-
-## Project Structure
-```
-Voice2Knowledge/
-├── backend/          # FastAPI backend (audio processing, transcription)
-├── frontend/         # React + Vite UI
-├── src/              # Core utilities (launcher, models, config)
-├── script.py         # Lightweight CLI tool
-├── build.sh/.bat    # Build scripts
-├── app.spec         # PyInstaller configuration
-└── guide.md         # CLI usage guide
-```
 
 ---
 
 ## Troubleshooting
 
-- **GPU not detected**: Falls back to CPU automatically, works fine but slower
+- **GPU not detected**: Falls back to CPU automatically, works fine but slower.
 - **Port 8000 in use**: Change port: `python -m uvicorn backend.main:app --port 9000`
-- **Model download slow**: First run downloads models (~1GB), subsequent runs are faster
+- **Model download slow**: First run downloads models (~1-2GB). Subsequent runs are instant.
 
 ---
 

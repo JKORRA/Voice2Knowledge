@@ -61,7 +61,7 @@ export function ResultMessage({ file, content }: ResultMessageProps) {
         <Bot size={18} />
       </div>
 
-      <div className="flex flex-col gap-3 max-w-[80%] px-4 py-3 rounded-2xl shadow-md bg-[var(--message-assistant-bg)] text-[var(--message-assistant-foreground)] rounded-tl-sm">
+      <div className="flex flex-col gap-3 max-w-[80%] px-4 py-3 rounded-2xl shadow-lg glass-panel text-[var(--message-assistant-foreground)] rounded-tl-sm border border-[var(--glass-border)] backdrop-blur-md">
         <div className="flex items-center gap-2 text-[var(--success)] font-medium">
           <Check size={16} />
           <span className="text-sm">Transcription Complete</span>
@@ -97,7 +97,7 @@ export function ResultMessage({ file, content }: ResultMessageProps) {
         <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-secondary-bg)] hover:bg-[var(--button-secondary-hover)] text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--border)] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)] text-sm font-medium rounded-md border border-[var(--glass-border)] transition-colors backdrop-blur-sm"
             title="Copy to clipboard"
           >
             {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}

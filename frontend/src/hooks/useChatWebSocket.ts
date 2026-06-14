@@ -96,11 +96,10 @@ export const useChatWebSocket = (sessionId: string | null) => {
     // Give it a tiny bit of time to connect if it was closed
     setTimeout(() => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            const { selectedContextFiles, settings } = useChatStore.getState();
+            const { settings } = useChatStore.getState();
             setGeneratingStatus(true);
             ws.current.send(JSON.stringify({ 
               question,
-              selected_files: selectedContextFiles,
               chat_model: settings.chatModel
             }));
         } else {

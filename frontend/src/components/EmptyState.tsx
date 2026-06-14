@@ -14,13 +14,13 @@ export function EmptyState({ onUploadClick }: EmptyStateProps) {
       className="h-full flex flex-col items-center justify-center text-center px-4"
     >
       <div className="relative mb-8">
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] flex items-center justify-center shadow-xl">
-          <Bot size={48} className="text-white" />
+        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] flex items-center justify-center shadow-[0_0_40px_rgba(0,122,255,0.4)] relative z-10">
+          <Bot size={48} className="text-white drop-shadow-md" />
         </div>
         <motion.div
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-[var(--card)] border-2 border-[var(--border)] flex items-center justify-center shadow-md"
+          className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full glass-panel flex items-center justify-center shadow-lg z-20"
         >
           <Mic size={18} className="text-[var(--accent)]" />
         </motion.div>
@@ -36,7 +36,7 @@ export function EmptyState({ onUploadClick }: EmptyStateProps) {
 
       <button
         onClick={onUploadClick}
-        className="group relative flex items-center gap-3 px-8 py-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200"
+        className="group relative flex items-center gap-3 px-8 py-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium rounded-2xl shadow-[0_8px_30px_rgba(0,122,255,0.3)] hover:shadow-[0_8px_40px_rgba(0,122,255,0.5)] hover:-translate-y-1 transition-all duration-300 backdrop-blur-md"
       >
         <Upload size={20} className="group-hover:scale-110 transition-transform" />
         <span>Upload audio files to transcribe</span>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, Sparkles, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Bot, Mic } from 'lucide-react';
 
 interface SetupScreenProps {
   onComplete: () => void;
@@ -60,36 +60,52 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
   }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[var(--background)] flex flex-col items-center justify-center p-6">
+    <div className="fixed inset-0 z-50 bg-animated-gradient flex flex-col items-center justify-center p-6 text-[var(--foreground)]">
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl p-8 flex flex-col items-center text-center"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="max-w-md w-full glass-panel-solid rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl relative overflow-hidden"
       >
-        <div className="w-16 h-16 bg-[var(--accent)]/10 rounded-2xl flex items-center justify-center mb-6">
-          <Sparkles className="text-[var(--accent)] w-8 h-8" />
+        {/* Animated Glow behind the logo */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-[var(--accent)]/20 rounded-full blur-3xl -z-10 animate-pulse" />
+
+        <div className="relative mb-8">
+          <motion.div 
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] flex items-center justify-center shadow-[0_0_40px_rgba(0,122,255,0.4)] relative z-10"
+          >
+            <Bot size={48} className="text-white drop-shadow-md" />
+          </motion.div>
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full glass-panel bg-white/10 dark:bg-black/10 flex items-center justify-center shadow-lg z-20"
+          >
+            <Mic size={18} className="text-[var(--accent)]" />
+          </motion.div>
         </div>
         
-        <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">First Time Setup</h1>
-        <p className="text-[var(--foreground-secondary)] mb-8">
-          Downloading default AI models for offline use. This only happens once.
+        <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2 tracking-tight">First Time Setup</h1>
+        <p className="text-[var(--foreground-secondary)] text-sm mb-8 px-4 leading-relaxed">
+          Downloading default AI models for offline, privacy-first use. This only happens once.
         </p>
 
         {error ? (
-          <div className="w-full p-4 bg-[var(--error)]/10 text-[var(--error)] rounded-xl text-sm mb-4">
+          <div className="w-full p-4 bg-[var(--error)]/10 text-[var(--error)] border border-[var(--error)]/20 rounded-xl text-sm mb-4 font-medium">
             {error}
           </div>
         ) : (
-          <div className="w-full space-y-6">
+          <div className="w-full space-y-4">
             {/* Whisper Progress */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm font-medium">
+            <div className="glass-panel bg-black/5 dark:bg-white/5 p-4 rounded-2xl flex flex-col gap-3">
+              <div className="flex justify-between text-sm font-semibold">
                 <span className="text-[var(--foreground)]">Transcription Engine</span>
-                <span className="text-[var(--accent)]">{whisperDone ? 'Complete' : `${whisperProgress}%`}</span>
+                <span className="text-[var(--accent)] font-mono">{whisperDone ? 'Complete' : `${whisperProgress}%`}</span>
               </div>
-              <div className="h-2 w-full bg-[var(--background-secondary)] rounded-full overflow-hidden">
+              <div className="h-2.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden shadow-inner">
                 <motion.div 
-                  className="h-full bg-[var(--accent)]"
+                  className="h-full bg-gradient-to-r from-[var(--accent-hover)] to-[var(--accent)] rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${whisperProgress}%` }}
                   transition={{ ease: "linear", duration: 0.2 }}
@@ -98,14 +114,14 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
             </div>
 
             {/* LLM Progress */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm font-medium">
+            <div className="glass-panel bg-black/5 dark:bg-white/5 p-4 rounded-2xl flex flex-col gap-3">
+              <div className="flex justify-between text-sm font-semibold">
                 <span className="text-[var(--foreground)]">AI Assistant</span>
-                <span className="text-[var(--accent)]">{llmDone ? 'Complete' : `${llmProgress}%`}</span>
+                <span className="text-[var(--accent)] font-mono">{llmDone ? 'Complete' : `${llmProgress}%`}</span>
               </div>
-              <div className="h-2 w-full bg-[var(--background-secondary)] rounded-full overflow-hidden">
+              <div className="h-2.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden shadow-inner">
                 <motion.div 
-                  className="h-full bg-[var(--accent)]"
+                  className="h-full bg-gradient-to-r from-[var(--accent-hover)] to-[var(--accent)] rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${llmProgress}%` }}
                   transition={{ ease: "linear", duration: 0.2 }}
@@ -113,17 +129,21 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
               </div>
             </div>
 
-            <div className="pt-4 flex items-center justify-center gap-3 text-[var(--foreground-tertiary)] text-sm">
+            <div className="pt-6 flex flex-col items-center justify-center gap-3">
               {whisperDone && llmDone ? (
-                <>
-                  <CheckCircle className="w-4 h-4 text-[var(--success)]" />
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center gap-2 text-[var(--success)] font-semibold bg-[var(--success)]/10 px-4 py-2 rounded-full"
+                >
+                  <CheckCircle className="w-5 h-5" />
                   <span>Setup complete! Starting app...</span>
-                </>
+                </motion.div>
               ) : (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="truncate max-w-[250px]">{status}</span>
-                </>
+                <div className="flex items-center gap-3 text-[var(--foreground-tertiary)] font-medium bg-black/5 dark:bg-white/5 px-4 py-2 rounded-full border border-[var(--glass-border)]">
+                  <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
+                  <span className="text-sm truncate max-w-[220px]">{status}</span>
+                </div>
               )}
             </div>
           </div>

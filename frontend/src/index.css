@@ -5,6 +5,7 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   /* Custom Accent Colors */
   --accent: #007aff;
   --accent-hover: #0252c6;
@@ -12,33 +13,44 @@
   --accent-dark: #002951;
   --accent-deep: #001c3d;
 
-  /* Light Mode - Base */
-  --background: #ffffff;
-  --background-secondary: #f8f9fa;
+  /* Light Mode - Base (with gradient for glassmorphism) */
+  --background: #fdfdfd;
+  --bg-gradient-1: #e0f2fe;
+  --bg-gradient-2: #f3e8ff;
+  --bg-gradient-3: #ffedd5;
+  --background-secondary: rgba(255, 255, 255, 0.6);
   --foreground: #1a1a1a;
-  --foreground-secondary: #6b7280;
+  --foreground-secondary: #4b5563;
   --foreground-tertiary: #9ca3af;
 
+  /* Glassmorphism Tokens - Light */
+  --glass-bg: rgba(255, 255, 255, 0.35);
+  --glass-bg-solid: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-border-focus: rgba(0, 122, 255, 0.5);
+  --glass-highlight: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+
   /* Light Mode - Surface */
-  --card: #ffffff;
-  --card-elevated: #ffffff;
-  --border: #e5e7eb;
-  --border-focus: #007aff;
+  --card: var(--glass-bg);
+  --card-elevated: var(--glass-bg-solid);
+  --border: var(--glass-border);
+  --border-focus: var(--glass-border-focus);
 
   /* Light Mode - Interactive */
   --button-primary-bg: #007aff;
   --button-primary-hover: #0252c6;
-  --button-secondary-bg: #f3f4f6;
-  --button-secondary-hover: #e5e7eb;
+  --button-secondary-bg: rgba(255, 255, 255, 0.5);
+  --button-secondary-hover: rgba(255, 255, 255, 0.8);
 
   /* Light Mode - Message Bubbles */
-  --message-user-bg: #007aff;
+  --message-user-bg: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
   --message-user-foreground: #ffffff;
-  --message-assistant-bg: #f3f4f6;
+  --message-assistant-bg: rgba(255, 255, 255, 0.75);
   --message-assistant-foreground: #1a1a1a;
 
   /* Light Mode - Progress */
-  --progress-bg: #e5e7eb;
+  --progress-bg: rgba(255, 255, 255, 0.5);
   --progress-fill: #007aff;
 
   /* Shadows */
@@ -61,33 +73,45 @@
 }
 
 .dark {
-  /* Dark Mode - Base */
-  --background: #0a0a0a;
-  --background-secondary: #171717;
+  color-scheme: dark;
+  /* Dark Mode - Base (with gradient for glassmorphism) */
+  --background: #09090b;
+  --bg-gradient-1: #0f172a;
+  --bg-gradient-2: #2e1065;
+  --bg-gradient-3: #1e1b4b;
+  --background-secondary: rgba(23, 23, 23, 0.5);
   --foreground: #f5f5f5;
   --foreground-secondary: #a1a1aa;
   --foreground-tertiary: #71717a;
 
+  /* Glassmorphism Tokens - Dark */
+  --glass-bg: rgba(24, 24, 27, 0.45);
+  --glass-bg-solid: rgba(24, 24, 27, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-focus: rgba(0, 122, 255, 0.6);
+  --glass-highlight: rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
   /* Dark Mode - Surface */
-  --card: #171717;
-  --card-elevated: #1f1f1f;
-  --border: #27272a;
-  --border-focus: #007aff;
+  --card: var(--glass-bg);
+  --card-elevated: var(--glass-bg-solid);
+  --border: var(--glass-border);
+  --border-focus: var(--glass-border-focus);
 
   /* Dark Mode - Interactive */
   --button-primary-bg: #007aff;
   --button-primary-hover: #0252c6;
-  --button-secondary-bg: #27272a;
-  --button-secondary-hover: #3f3f46;
+  --button-secondary-bg: rgba(39, 39, 42, 0.5);
+  --button-secondary-hover: rgba(63, 63, 70, 0.6);
 
   /* Dark Mode - Message Bubbles */
-  --message-user-bg: #007aff;
+  --message-user-bg: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
   --message-user-foreground: #ffffff;
-  --message-assistant-bg: #27272a;
+  --message-assistant-bg: rgba(39, 39, 42, 0.65);
   --message-assistant-foreground: #f5f5f5;
 
   /* Dark Mode - Progress */
-  --progress-bg: #27272a;
+  --progress-bg: rgba(39, 39, 42, 0.5);
   --progress-fill: #007aff;
 
   /* Shadows */
@@ -116,8 +140,17 @@ html, body, #root {
 
 body {
   background-color: var(--background);
+  background-image: 
+    radial-gradient(at 0% 0%, var(--bg-gradient-1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, var(--bg-gradient-2) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--bg-gradient-3) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, var(--bg-gradient-1) 0px, transparent 50%);
+  background-size: 200% 200%;
+  background-attachment: fixed;
+  animation: gradientFlow 15s ease infinite;
   color: var(--foreground);
   transition: background-color 0.2s ease, color 0.2s ease;
+  min-height: 100vh;
 }
 
 /* Custom scrollbar */
@@ -164,6 +197,34 @@ input, textarea, select {
   color: white;
 }
 
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-panel-solid {
+  background: var(--glass-bg-solid);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-2xl);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel-hover:hover {
+  background: var(--glass-highlight);
+  border-color: var(--glass-border-focus);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
 /* Animation utilities */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -185,6 +246,14 @@ input, textarea, select {
   to { transform: rotate(360deg); }
 }
 
+@keyframes gradientFlow {
+  0% { background-position: 0% 0%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.2s ease-out;
 }
@@ -199,4 +268,9 @@ input, textarea, select {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+.bg-animated-gradient {
+  animation: gradientFlow 15s ease infinite;
+  background-size: 200% 200%;
 }

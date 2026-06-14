@@ -33,10 +33,10 @@ export function ChatMessage({ msg }: ChatMessageProps) {
     >
       <div
         className={cn(
-          'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
+          'w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-md',
           role === 'user'
-            ? 'bg-[var(--accent)] text-white'
-            : 'bg-[var(--card)] border border-[var(--border)] text-[var(--accent)]'
+            ? 'bg-[var(--accent)] text-white shadow-[0_4px_12px_rgba(0,122,255,0.3)]'
+            : 'glass-panel text-[var(--accent)]'
         )}
       >
         {role === 'user' ? <User size={18} /> : <Bot size={18} />}
@@ -44,16 +44,16 @@ export function ChatMessage({ msg }: ChatMessageProps) {
 
       <div
         className={cn(
-          'relative flex flex-col gap-2 max-w-[80%] px-4 py-3 rounded-2xl shadow-md',
+          'relative flex flex-col gap-2 max-w-[80%] px-4 py-3 rounded-2xl shadow-lg backdrop-blur-md border border-[var(--glass-border)]',
           role === 'user'
-            ? 'bg-[var(--message-user-bg)] text-[var(--message-user-foreground)] rounded-tr-sm'
-            : 'bg-[var(--message-assistant-bg)] text-[var(--message-assistant-foreground)] rounded-tl-sm'
+            ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-white rounded-tr-sm border-white/20'
+            : 'glass-panel text-[var(--message-assistant-foreground)] rounded-tl-sm'
         )}
       >
         {role === 'user' && (msg.files?.names.length || 0) > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
             {msg.files!.names.map((name, idx) => (
-              <div key={idx} className="flex flex-col gap-1 bg-black/10 dark:bg-white/10 p-2 rounded-xl border border-black/5 dark:border-white/5 min-w-[120px] max-w-[200px]">
+              <div key={idx} className="flex flex-col gap-1 bg-black/20 p-2 rounded-xl border border-white/20 min-w-[120px] max-w-[200px]">
                 <span className="text-xs font-semibold truncate" title={name}>{name}</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <FileAudio size={12} className="opacity-70" />

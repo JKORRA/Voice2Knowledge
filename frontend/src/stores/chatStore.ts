@@ -9,7 +9,6 @@ interface ChatState {
   isGenerating: boolean;
   sessionId: string | null;
   showSettings: boolean;
-  selectedContextFiles: string[];
   addMessage: (msg: Omit<Message, 'id'> & { id?: string }) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
   setSettings: (settings: Partial<Settings>) => void;
@@ -19,8 +18,6 @@ interface ChatState {
   setSessionId: (id: string | null) => void;
   setShowSettings: (show: boolean) => void;
   clearMessages: () => void;
-  toggleContextFile: (filename: string) => void;
-  selectAllContextFiles: (filenames: string[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -37,7 +34,6 @@ export const useChatStore = create<ChatState>((set) => ({
   isGenerating: false,
   sessionId: null,
   showSettings: false,
-  selectedContextFiles: [],
 
   addMessage: (msg) => set((state) => ({
     messages: [...state.messages, { ...msg, id: msg.id || Math.random().toString(36).substring(7) }]
@@ -54,13 +50,7 @@ export const useChatStore = create<ChatState>((set) => ({
   setConnectionStatus: (status) => set({ isConnected: status }),
   setTranscribingStatus: (status) => set({ isTranscribing: status }),
   setGeneratingStatus: (status) => set({ isGenerating: status }),
-  setSessionId: (id) => set({ sessionId: id, selectedContextFiles: [] }),
+  setSessionId: (id) => set({ sessionId: id }),
   setShowSettings: (show) => set({ showSettings: show }),
-  clearMessages: () => set({ messages: [], selectedContextFiles: [] }),
-  toggleContextFile: (filename) => set((state) => ({
-    selectedContextFiles: state.selectedContextFiles.includes(filename)
-      ? state.selectedContextFiles.filter(f => f !== filename)
-      : [...state.selectedContextFiles, filename]
-  })),
-  selectAllContextFiles: (filenames) => set({ selectedContextFiles: filenames }),
+  clearMessages: () => set({ messages: [] }),
 }));

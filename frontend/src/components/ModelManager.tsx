@@ -178,9 +178,9 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-[550px] max-w-full max-h-full flex flex-col bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl overflow-hidden pointer-events-auto"
+              className="w-[550px] max-w-full max-h-full flex flex-col glass-panel-solid rounded-2xl border border-[var(--glass-border)] shadow-2xl overflow-hidden pointer-events-auto"
             >
-              <div className="flex items-center justify-between p-4 border-b border-[var(--border)] shrink-0 bg-[var(--card)]">
+              <div className="flex items-center justify-between p-4 border-b border-[var(--glass-border)] shrink-0 bg-black/5 dark:bg-white/5">
                 <div className="flex items-center gap-2">
                   <Sparkles size={20} className="text-[var(--accent)]" />
                   <h2 className="text-lg font-semibold text-[var(--foreground)]">Manage Models</h2>
@@ -227,7 +227,7 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
                 )}
               </div>
 
-              <div className="p-4 border-t border-[var(--border)] shrink-0 bg-[var(--card)]">
+              <div className="p-4 border-t border-[var(--glass-border)] shrink-0 bg-black/5 dark:bg-white/5">
                 <p className="text-xs text-[var(--foreground-tertiary)] text-center">
                   Models are downloaded to your local machine. Delete unused models to save disk space.
                 </p>

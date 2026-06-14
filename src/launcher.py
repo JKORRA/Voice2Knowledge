@@ -66,6 +66,28 @@ def main():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Voice2Knowledge</title>
         <style>
+            :root {
+                --background: #09090b;
+                --bg-gradient-1: #0f172a;
+                --bg-gradient-2: #2e1065;
+                --bg-gradient-3: #1e1b4b;
+                --foreground: #f5f5f5;
+                --foreground-secondary: #a1a1aa;
+                --mic-bg: rgba(255,255,255,0.1);
+                --mic-border: rgba(255,255,255,0.2);
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --background: #fdfdfd;
+                    --bg-gradient-1: #e0f2fe;
+                    --bg-gradient-2: #f3e8ff;
+                    --bg-gradient-3: #ffedd5;
+                    --foreground: #1a1a1a;
+                    --foreground-secondary: #4b5563;
+                    --mic-bg: rgba(255,255,255,0.8);
+                    --mic-border: rgba(0,0,0,0.1);
+                }
+            }
             body {
                 font-family: system-ui, -apple-system, sans-serif;
                 display: flex;
@@ -74,27 +96,101 @@ def main():
                 justify-content: center;
                 height: 100vh;
                 margin: 0;
+                background-color: var(--background);
+                background-image: 
+                    radial-gradient(at 0% 0%, var(--bg-gradient-1) 0px, transparent 50%),
+                    radial-gradient(at 100% 0%, var(--bg-gradient-2) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, var(--bg-gradient-3) 0px, transparent 50%),
+                    radial-gradient(at 0% 100%, var(--bg-gradient-1) 0px, transparent 50%);
+                background-size: 200% 200%;
+                animation: gradientFlow 15s ease infinite;
+                color: var(--foreground);
+            }
+            @keyframes gradientFlow {
+                0% { background-position: 0% 0%; }
+                25% { background-position: 100% 0%; }
+                50% { background-position: 100% 100%; }
+                75% { background-position: 0% 100%; }
+                100% { background-position: 0% 0%; }
+            }
+            .logo-container {
+                position: relative;
+                margin-bottom: 32px;
+            }
+            .bot-box {
+                width: 96px;
+                height: 96px;
+                border-radius: 24px;
                 background: linear-gradient(135deg, #007aff 0%, #0252c6 100%);
-                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 0 40px rgba(0,122,255,0.4);
+                position: relative;
+                z-index: 10;
+                animation: bounce 2s ease-in-out infinite;
             }
-            .spinner {
-                width: 50px;
-                height: 50px;
-                border: 4px solid rgba(255,255,255,0.3);
-                border-top-color: white;
+            .mic-box {
+                position: absolute;
+                bottom: -8px;
+                right: -8px;
+                width: 40px;
+                height: 40px;
                 border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin-bottom: 24px;
+                background: var(--mic-bg);
+                backdrop-filter: blur(16px);
+                border: 1px solid var(--mic-border);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                z-index: 20;
+                animation: scaleBounce 2s ease-in-out infinite;
             }
-            @keyframes spin { to { transform: rotate(360deg); } }
-            h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; }
-            p { color: rgba(255,255,255,0.8); font-size: 0.9rem; text-align: center; max-width: 80%; line-height: 1.5; }
+            .pulse-glow {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 150px;
+                height: 150px;
+                background: rgba(0,122,255,0.2);
+                border-radius: 50%;
+                filter: blur(40px);
+                z-index: 1;
+                animation: pulse 2s ease-in-out infinite;
+            }
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+            @keyframes scaleBounce {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 0.5; }
+                50% { opacity: 1; }
+            }
+            h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.025em; }
+            p { color: var(--foreground-secondary); font-size: 0.875rem; text-align: center; font-weight: 500; }
+            svg { color: var(--foreground); }
+            .bot-box svg { color: white; }
+            .mic-box svg { color: #007aff; }
         </style>
     </head>
     <body>
-        <div class="spinner"></div>
+        <div class="logo-container">
+            <div class="pulse-glow"></div>
+            <div class="bot-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+            </div>
+            <div class="mic-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            </div>
+        </div>
         <h1>Voice2Knowledge</h1>
-        <p>Loading application...</p>
+        <p>Starting local server...</p>
     </body>
     </html>
     """

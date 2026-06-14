@@ -1,20 +1,21 @@
-import { useEffect, useState, startTransition } from 'react';
+import { useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>('system');
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
-
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null;
-    if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      startTransition(() => {
-        setTheme(stored);
-      });
-    }
-  }, []);
+  const [theme, setTheme] = useState<Theme>(() => {
+    return (localStorage.getItem('theme') as Theme) || 'system';
+  });
+  
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
+    const storedTheme = localStorage.getItem('theme') as Theme | null;
+    const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    if (storedTheme === 'dark') return 'dark';
+    if (storedTheme === 'light') return 'light';
+    if (isLight) return 'light';
+    return 'dark'; // Default to dark if no strict light preference or system detection fails
+  });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');

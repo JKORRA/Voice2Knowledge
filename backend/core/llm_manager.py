@@ -108,7 +108,7 @@ class LLMManager:
                 except Exception:
                     pass
 
-    async def generate_stream(self, system_prompt: str, user_prompt: str, cancel_event: threading.Event, chat_model: str = "qwen2.5-3b"):
+    async def generate_stream(self, messages: list, cancel_event: threading.Event, chat_model: str = "qwen2.5-3b"):
         """Generate response via streaming."""
         async with self._lock:
             if chat_model and chat_model != self.current_model_id:
@@ -130,10 +130,6 @@ class LLMManager:
             if self._model is None:
                 await asyncio.to_thread(self._load_model)
 
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
 
             logger.info("Starting LLM stream generation...")
             

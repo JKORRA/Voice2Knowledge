@@ -4,7 +4,20 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>Voice2Knowledge</title>
+    <script>
+      (function() {
+        try {
+          var storedTheme = localStorage.getItem('theme');
+          var isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+          if (storedTheme === 'light' || (storedTheme !== 'dark' && isLight)) {
+            document.documentElement.classList.add('light');
+          } else {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

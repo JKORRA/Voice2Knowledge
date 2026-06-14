@@ -12,7 +12,6 @@ import { ChatMessage } from './components/ChatMessage';
 import { ProgressMessage } from './components/ProgressMessage';
 import { ResultMessage } from './components/ResultMessage';
 import { ChatInput } from './components/ChatInput';
-import { ContextSelector } from './components/ContextSelector';
 import { SetupScreen } from './components/SetupScreen';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from './lib/utils';
@@ -22,7 +21,6 @@ export default function App() {
     messages,
     settings,
     setSettings,
-    isConnected,
     isTranscribing,
     sessionId,
     setSessionId,
@@ -210,7 +208,7 @@ export default function App() {
 
   if (needsSetup === null) {
     return (
-      <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)] items-center justify-center">
+      <div className="flex h-screen bg-transparent text-[var(--foreground)] items-center justify-center">
         <Loader2 className="animate-spin text-[var(--accent)] w-8 h-8" />
       </div>
     );
@@ -221,13 +219,15 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <div className="flex h-screen bg-transparent text-[var(--foreground)]">
       <SettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         settings={settings}
         onSettingsChange={setSettings}
         isDisabled={isTranscribing}
+        resolvedTheme={resolvedTheme}
+        onThemeToggle={toggleTheme}
       />
 
       <HistoryPanel
@@ -238,17 +238,21 @@ export default function App() {
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <input
+          type="file"
+          multiple
+          accept=".wav,.mp3,.m4a,.flac,.ogg,.webm,.mp4"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+        />
         <Header
           onSettingsClick={() => setShowSettings(true)}
           onHistoryClick={() => setShowHistory(true)}
           onNewChat={handleNewChat}
-          isConnected={isConnected}
-          theme="system"
-          resolvedTheme={resolvedTheme}
-          onThemeToggle={toggleTheme}
         />
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[var(--background)]">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
           {messages.length === 0 ? (
             <EmptyState onUploadClick={() => fileInputRef.current?.click()} />
           ) : (
@@ -263,27 +267,19 @@ export default function App() {
           )}
         </div>
 
-        <div className="bg-[var(--card)] border-t border-[var(--border)] p-4">
+        {(messages.length > 0 || pendingFiles) && (
+          <div className="glass-panel rounded-t-2xl border-b-0 border-x-0 sm:border-x sm:border-b sm:rounded-2xl sm:mb-4 sm:mx-4 p-4 shadow-xl">
           <div className="max-w-4xl mx-auto relative flex items-center gap-2">
-            <input
-              type="file"
-              multiple
-              accept=".wav,.mp3,.m4a,.flac,.ogg,.webm,.mp4"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-            />
-
             {!showChatInput ? (
               <div className="flex-1 flex gap-2">
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                    onClick={() => fileInputRef.current?.click()}
                   disabled={isTranscribing || isUploading || isGenerating}
                   className={cn(
-                    'flex-1 py-4 px-6 rounded-xl border-2 border-dashed flex items-center justify-center gap-3 transition-all duration-200',
+                    'flex-1 py-4 px-6 rounded-xl border border-dashed flex items-center justify-center gap-3 transition-all duration-300 glass-panel glass-panel-hover',
                     (isTranscribing || isUploading || isGenerating)
-                      ? 'bg-[var(--background-secondary)] border-[var(--border)] cursor-not-allowed text-[var(--foreground-tertiary)]'
-                      : 'bg-[var(--background-secondary)] border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 text-[var(--foreground-secondary)] hover:text-[var(--accent)]'
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:border-[var(--accent)] text-[var(--foreground)] hover:text-[var(--accent)]'
                   )}
                 >
                   {isUploading ? (
@@ -303,7 +299,7 @@ export default function App() {
                 {sessionId && messages.some(m => m.type === 'result') && !isTranscribing && !isUploading && (
                   <button
                     onClick={() => setShowChatInput(true)}
-                    className="shrink-0 px-6 py-4 rounded-xl border border-[var(--border)] bg-[var(--background-secondary)] hover:bg-[var(--border)] text-[var(--foreground-secondary)] transition-colors font-medium"
+                    className="shrink-0 px-6 py-4 rounded-xl border glass-panel glass-panel-hover text-[var(--foreground)] transition-colors font-medium shadow-md"
                   >
                     Return to Chat
                   </button>
@@ -312,7 +308,7 @@ export default function App() {
                 {isTranscribing && (
                   <button
                     onClick={cancelTranscription}
-                    className="shrink-0 px-4 py-3 rounded-xl bg-[var(--error)]/10 text-[var(--error)] border border-[var(--error)]/20 hover:bg-[var(--error)]/20 flex items-center gap-2 font-medium transition-colors"
+                    className="shrink-0 px-4 py-3 rounded-xl bg-[var(--error)]/20 text-[var(--error)] border border-[var(--error)]/30 hover:bg-[var(--error)]/40 flex items-center gap-2 font-medium transition-colors shadow-md backdrop-blur-md"
                   >
                     <SquareSquare size={18} />
                     <span className="hidden sm:inline">Stop</span>
@@ -321,7 +317,6 @@ export default function App() {
               </div>
             ) : (
               <div className="w-full flex flex-col items-center">
-                <ContextSelector />
                 <div className="w-full flex items-end gap-2">
                   <div className="flex-1 w-full">
                     <ChatInput
@@ -344,6 +339,7 @@ export default function App() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

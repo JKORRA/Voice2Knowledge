@@ -54,13 +54,13 @@ export function ChatInput({
 
   return (
     <div className={cn(
-      "relative flex flex-col gap-3 max-w-4xl mx-auto w-full bg-[var(--background-secondary)] rounded-3xl border-2 border-[var(--border)] p-4 transition-all duration-200 focus-within:border-[var(--accent)] hover:border-[var(--accent)]/50",
+      "relative flex flex-col gap-3 max-w-4xl mx-auto w-full glass-panel rounded-3xl p-4 transition-all duration-300 focus-within:border-[var(--glass-border-focus)] focus-within:shadow-[0_8px_32px_rgba(0,122,255,0.15)]",
       (disabled || isGenerating) ? "opacity-50 cursor-not-allowed" : ""
     )}>
       {pendingFiles && pendingFiles.names.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {pendingFiles.names.map((name, idx) => (
-            <div key={idx} className="flex flex-col gap-1 bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)] shadow-sm min-w-[120px] max-w-[200px]">
+            <div key={idx} className="flex flex-col gap-1 bg-black/5 dark:bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-[var(--glass-border)] shadow-sm min-w-[120px] max-w-[200px]">
               <span className="text-xs font-semibold text-[var(--foreground)] truncate w-full" title={name}>{name}</span>
               <div className="flex items-center gap-1.5 mt-1">
                 <FileAudio size={14} className="text-[var(--accent)]" />
