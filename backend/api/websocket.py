@@ -400,7 +400,16 @@ async def chat_ws(websocket: WebSocket, session_id: str):
         transcriptions = session_content.get("transcriptions", [])
         past_chats = session_content.get("chats", [])
         
-        context_text = "\n\n".join([t.get('text_content', '') for t in transcriptions if t.get('text_content')])
+        import re
+        context_text_parts = []
+        for t in transcriptions:
+            content = t.get('text_content')
+            if content:
+                filename = t.get('filename', 'Unknown File')
+                clean_filename = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', filename, flags=re.IGNORECASE)
+                context_text_parts.append(f"--- File: {clean_filename} ---\n{content}")
+                
+        context_text = "\n\n".join(context_text_parts)
         
         if not context_text:
             await websocket.send_json({"type": "error", "message": "No transcriptions found for this session."})
