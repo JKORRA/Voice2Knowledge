@@ -7,9 +7,10 @@ A premium, privacy-first local audio transcription and AI assistant. All process
 </p>
 
 ## Key Features
-- **Privacy First**: 100% offline, local processing. Your data is yours.
+- **Privacy First**: 100% offline, local processing by default. Your data is yours. Optional support for cloud APIs if desired.
 - **Premium UI/UX**: Beautiful, responsive glassmorphism interface with fluid animations and automatic Light/Dark mode syncing.
 - **Advanced AI Memory**: Features a ChatGPT-style Token-Aware Dynamic Memory system. It mathematically balances context limits to remember dozens of previous chat messages seamlessly without crashing.
+- **Bring Your Own API**: Save and manage multiple external AI providers (OpenAI, Anthropic, Gemini, Groq) via a built-in `litellm` integration.
 - **Automatic RAG Engine**: Uses a pure-Python TF-IDF engine to instantly chunk and retrieve the most relevant pieces of your transcriptions based on your questions. No manual context selection required!
 - **GPU Acceleration**: Auto-detects NVIDIA GPUs (via `ctranslate2` & `nvidia-smi`) for lightning-fast transcription, or gracefully falls back to CPU processing.
 - **History & Export**: Saves all your sessions. Export your transcriptions to TXT, PDF, or DOCX.
@@ -101,6 +102,12 @@ All models are downloaded on demand when first selected. Switch anytime in **Set
 | Llama 3.2 1B Instruct | ~0.7 GB | |
 | Phi 3.5 Mini Instruct | ~2.2 GB | |
 
+**External API Providers** (via LiteLLM):
+If you prefer not to use your local hardware for chat, you can configure external providers in **Settings → External API**.
+- Store and manage multiple API keys and endpoints simultaneously.
+- Instantly switch between custom models (e.g., `gpt-4o`, `gemini/gemini-1.5-pro`, `groq/llama3-8b-8192`) via a sleek dropdown interface.
+- Includes support for local proxies like Ollama or LMStudio by specifying a custom Base URL.
+
 ---
 
 ## Tech Stack
@@ -109,6 +116,7 @@ All models are downloaded on demand when first selected. Switch anytime in **Set
 - **Framework**: [FastAPI](https://fastapi.tiangolo.com/) + Uvicorn (REST API + WebSocket real-time)
 - **Transcription**: [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) (CTranslate2-optimized Whisper, no PyTorch)
 - **Local LLM**: [`llama-cpp-python`](https://github.com/abetlen/llama-cpp-python) (GGUF quantized models)
+- **External LLM Routing**: [`litellm`](https://github.com/BerriAI/litellm) (Universal API support for 100+ providers)
 - **Database**: SQLite (transcription & chat history, no external DB server needed)
 - **Desktop Wrapper**: [pywebview](https://pywebview.flowrl.com/) + PyQt6
 - **Export**: TXT, PDF ([fpdf2](https://github.com/andreax79/fpdf2)), DOCX ([python-docx](https://github.com/python-openxml/python-docx))

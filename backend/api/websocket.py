@@ -390,6 +390,10 @@ async def chat_ws(websocket: WebSocket, session_id: str):
         data = await websocket.receive_json()
         question = data.get("question", "")
         chat_model = data.get("chat_model", "qwen2.5-3b")
+        chat_provider = data.get("chat_provider", "local")
+        external_api_base_url = data.get("external_api_base_url", "")
+        external_api_key = data.get("external_api_key", "")
+        external_api_model = data.get("external_api_model", "")
 
         session_content = db.get_session_content(session_id)
         if not session_content:
@@ -500,12 +504,13 @@ async def chat_ws(websocket: WebSocket, session_id: str):
 
         system_prompt = f"You are an AI assistant. Answer the user's question using ONLY the provided transcription context. Do not make up answers.\n\nContext:\n{relevant_context}"
 
-        if not llm_manager.is_model_downloaded(chat_model):
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Chat model '{chat_model}' is not downloaded. Please download it from Settings first."
-            })
-            return
+        if chat_provider == "local":
+            if not llm_manager.is_model_downloaded(chat_model):
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Chat model '{chat_model}' is not downloaded. Please download it from Settings first."
+                })
+                return
 
         await websocket.send_json({"type": "status", "message": "Thinking..."})
 
@@ -540,18 +545,66 @@ async def chat_ws(websocket: WebSocket, session_id: str):
         import json
         logger.info(f"\n{'='*50}\nFULL LLM PROMPT PAYLOAD:\n{json.dumps(messages_payload, indent=2, ensure_ascii=False)}\n{'='*50}")
 
-        async for token in llm_manager.generate_stream(messages_payload, cancel_event, chat_model):
-            full_response += token
-            await websocket.send_json({"type": "token", "content": token})
-            # Also listen for stop commands without blocking
-            try:
-                msg = await asyncio.wait_for(websocket.receive_json(), timeout=0.01)
-                if msg.get("action") == "stop":
+        if chat_provider == "external":
+            if not external_api_key:
+                await websocket.send_json({"type": "error", "message": "External API key is missing. Please configure it in settings."})
+                cancel_event.set()
+            elif not external_api_model:
+                await websocket.send_json({"type": "error", "message": "External model name is missing. Please configure it in settings."})
+                cancel_event.set()
+            else:
+                try:
+                    from litellm import acompletion
+                    response = await acompletion(
+                        model=external_api_model,
+                        messages=messages_payload,
+                        api_key=external_api_key,
+                        base_url=external_api_base_url if external_api_base_url else None,
+                        stream=True,
+                    )
+                    
+                    async def process_external_stream():
+                        nonlocal full_response
+                        async for chunk in response:
+                            if cancel_event.is_set():
+                                break
+                            content = chunk.choices[0].delta.content
+                            if content:
+                                full_response += content
+                                await websocket.send_json({"type": "token", "content": content})
+                    
+                    stream_task = asyncio.create_task(process_external_stream())
+                    
+                    while not stream_task.done():
+                        try:
+                            msg = await asyncio.wait_for(websocket.receive_json(), timeout=0.01)
+                            if msg.get("action") == "stop":
+                                cancel_event.set()
+                        except asyncio.TimeoutError:
+                            pass
+                        except Exception:
+                            cancel_event.set()
+                            break
+                            
+                    await stream_task
+
+                except Exception as e:
+                    logger.error(f"External API error: {e}")
+                    await websocket.send_json({"type": "error", "message": f"External API error: {str(e)}"})
                     cancel_event.set()
-            except asyncio.TimeoutError:
-                pass
-            except Exception:
-                break
+        else:
+            async for token in llm_manager.generate_stream(messages_payload, cancel_event, chat_model):
+                full_response += token
+                await websocket.send_json({"type": "token", "content": token})
+                # Also listen for stop commands without blocking
+                try:
+                    msg = await asyncio.wait_for(websocket.receive_json(), timeout=0.01)
+                    if msg.get("action") == "stop":
+                        cancel_event.set()
+                except asyncio.TimeoutError:
+                    pass
+                except Exception:
+                    break
 
         if not cancel_event.is_set():
             await websocket.send_json({"type": "done"})
@@ -560,7 +613,7 @@ async def chat_ws(websocket: WebSocket, session_id: str):
                 {"role": "user", "content": question},
                 {"role": "assistant", "content": full_response},
             ]
-            db.save_chat_session(session_id, chat_model, messages)
+            db.save_chat_session(session_id, chat_model if chat_provider == "local" else external_api_model, messages)
             db.ensure_session(session_id)
 
     except WebSocketDisconnect:

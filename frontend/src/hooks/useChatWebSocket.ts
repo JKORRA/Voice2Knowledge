@@ -112,10 +112,15 @@ export const useChatWebSocket = (sessionId: string | null) => {
     setTimeout(() => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             const { settings } = useChatStore.getState();
+            const activeExtModel = settings.externalModels?.find(m => m.id === settings.selectedExternalModelId);
             setGeneratingStatus(true);
             ws.current.send(JSON.stringify({ 
               question,
-              chat_model: settings.chatModel
+              chat_model: settings.chatModel,
+              chat_provider: settings.chatProvider,
+              external_api_base_url: activeExtModel?.baseUrl || "",
+              external_api_key: activeExtModel?.apiKey || "",
+              external_api_model: activeExtModel?.name || ""
             }));
         } else {
             addMessage({

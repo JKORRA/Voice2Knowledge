@@ -11,10 +11,20 @@ export interface Message {
   files?: { names: string[] };
 }
 
+export interface ExternalModelConfig {
+  id: string;
+  name: string;
+  apiKey: string;
+  baseUrl?: string;
+}
+
 export interface Settings {
   model: string;
   chatModel: string;
   device: string;
   computeType: string;
   beamSize: number;
+  chatProvider: 'local' | 'external';
+  externalModels: ExternalModelConfig[];
+  selectedExternalModelId: string | null;
 }

@@ -379,7 +379,7 @@ export default function App() {
                 <div className="flex items-center gap-4 mt-3 text-xs font-medium text-[var(--foreground-tertiary)]">
                   <span>Transcription Model: Whisper {settings.model}</span>
                   <span>•</span>
-                  <span>Chat Model: {settings.chatModel === 'qwen2.5-3b' ? 'Qwen 2.5 3B' : settings.chatModel === 'llama-3.2-1b' ? 'Llama 3.2 1B' : 'Phi 3.5 Mini'}</span>
+                  <span>Chat Model: {settings.chatProvider === 'external' ? (settings.externalModels?.find(m => m.id === settings.selectedExternalModelId)?.name || 'External API') : (settings.chatModel === 'qwen2.5-3b' ? 'Qwen 2.5 3B' : settings.chatModel === 'llama-3.2-1b' ? 'Llama 3.2 1B' : 'Phi 3.5 Mini')}</span>
                 </div>
               </div>
             )}

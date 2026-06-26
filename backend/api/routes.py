@@ -197,3 +197,28 @@ async def delete_model(model_name: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
+from pydantic import BaseModel
+
+class VerifyExternalApiRequest(BaseModel):
+    api_key: str
+    model_name: str
+    base_url: Optional[str] = None
+
+@router.post("/verify-external-api")
+async def verify_external_api(req: VerifyExternalApiRequest):
+    if not req.api_key or not req.model_name:
+        raise HTTPException(status_code=400, detail="API Key and Model Name are required")
+    
+    try:
+        from litellm import acompletion
+        await acompletion(
+            model=req.model_name,
+            messages=[{"role": "user", "content": "Hello"}],
+            api_key=req.api_key,
+            base_url=req.base_url if req.base_url else None,
+            max_tokens=1
+        )
+        return {"status": "success", "message": "Connection verified successfully!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Verification failed: {str(e)}")

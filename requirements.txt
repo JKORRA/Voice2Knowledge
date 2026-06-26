@@ -15,3 +15,4 @@ PyQt6-WebEngine
 llama-cpp-python
 huggingface-hub
 imageio-ffmpeg
+litellm
