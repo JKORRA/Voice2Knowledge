@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Cpu, HardDrive, Sparkles, Database, Moon, Sun, Cloud, Globe, Key, Check, Loader2, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { Cpu, HardDrive, Sparkles, Database, Moon, Sun, Cloud, Globe, Key, Check, Loader2, AlertCircle, Plus, Trash2, ArrowLeft, X } from 'lucide-react';
+import { cn } from '../lib/utils';
 import type { Settings as SettingsType } from '../types';
 import { DownloadConfirmModal } from './DownloadConfirmModal';
 import { ModelManager } from './ModelManager';
 import { CustomSelect } from './CustomSelect';
 
-interface SettingsPanelProps {
-  isOpen: boolean;
+interface SettingsScreenProps {
   onClose: () => void;
   settings: SettingsType;
   onSettingsChange: (settings: Partial<SettingsType>) => void;
@@ -36,15 +35,14 @@ const deviceOptions = [
   { value: 'cuda', label: 'CUDA', description: 'NVIDIA GPU' },
 ];
 
-export function SettingsPanel({
-  isOpen,
+export function SettingsScreen({
   onClose,
   settings,
   onSettingsChange,
   isDisabled = false,
   resolvedTheme,
   onThemeToggle,
-}: SettingsPanelProps) {
+}: SettingsScreenProps) {
   const [modelStatuses, setModelStatuses] = useState<Record<string, boolean>>({});
   
   // Download Modal State
@@ -83,12 +81,10 @@ export function SettingsPanel({
   };
 
   useEffect(() => {
-    if (isOpen) {
-      fetchStatuses();
-      setVerificationStatus('idle');
-      setVerificationMessage('');
-    }
-  }, [isOpen]);
+    fetchStatuses();
+    setVerificationStatus('idle');
+    setVerificationMessage('');
+  }, []);
 
   const verifyAndSaveExternalModel = async () => {
     if (!newExternalApiKey || !newExternalApiModel) {
@@ -184,7 +180,6 @@ export function SettingsPanel({
   const handleDownloadCancel = () => {
     setIsDownloadModalOpen(false);
     setPendingModelDownload(null);
-    // Dropdown will automatically revert because it's bound to the unmodified `settings` prop.
   };
 
   const modelOptions = baseModelOptions.map(opt => ({
@@ -208,59 +203,69 @@ export function SettingsPanel({
         onComplete={handleDownloadComplete}
       />
 
-      <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40"
-          />
-
-          <motion.div
-            initial={{ x: -320, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -320, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-4 top-4 bottom-4 w-80 rounded-2xl glass-panel-solid z-50 flex flex-col overflow-hidden border border-[var(--glass-border)]"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-              <div className="flex items-center gap-2">
-                <Settings size={20} className="text-[var(--accent)]" />
-                <h2 className="text-lg font-semibold text-[var(--foreground)]">Settings</h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-[var(--button-secondary-hover)] rounded-full transition-colors"
-              >
-                <X size={20} className="text-[var(--foreground-secondary)]" />
-              </button>
+      <div className="flex-1 w-full h-full overflow-y-auto p-4 md:p-8 bg-transparent">
+        <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+          
+          <div className="flex items-center gap-4 mb-8">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors flex items-center justify-center -ml-2"
+              title="Back to Chat"
+            >
+              <ArrowLeft size={20} className="text-[var(--foreground)]" />
+            </button>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-[var(--foreground)] tracking-tight">Settings</h2>
             </div>
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              <div className="p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--glass-border)] backdrop-blur-sm flex items-center justify-between">
+          <div className="glass-panel p-6 rounded-2xl shadow-sm space-y-8">
+            {/* Appearance Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] border-b border-[var(--border)] pb-2">Appearance</h3>
+              <div className="p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--glass-border)] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[var(--background)] rounded-lg shadow-sm border border-[var(--glass-border)]">
-                    {resolvedTheme === 'light' ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-[var(--accent)]" />}
+                    {resolvedTheme === 'light' ? <Sun size={20} className="text-amber-500" /> : <Moon size={20} className="text-[var(--accent)]" />}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-[var(--foreground)]">Appearance</span>
+                    <span className="text-sm font-medium text-[var(--foreground)]">Theme</span>
                     <span className="text-xs text-[var(--foreground-tertiary)]">{resolvedTheme === 'light' ? 'Light Mode' : 'Dark Mode'}</span>
                   </div>
                 </div>
                 <button
                   onClick={onThemeToggle}
-                  className="px-3 py-1.5 rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 text-xs font-bold transition-colors"
+                  className={cn(
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors outline-none",
+                    resolvedTheme === 'dark' ? 'bg-[var(--accent)]' : 'bg-black/20 dark:bg-white/20'
+                  )}
                 >
-                  Toggle
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out shadow-sm",
+                      resolvedTheme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                    )}
+                  />
                 </button>
               </div>
+            </div>
 
+            {/* Models Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] border-b border-[var(--border)] pb-2 flex items-center justify-between">
+                <span>AI Models</span>
+                <button
+                  onClick={() => setIsModelManagerOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)] text-xs font-medium transition-colors"
+                >
+                  <Database size={14} className="text-[var(--accent)]" />
+                  Manage Local Models
+                </button>
+              </h3>
+              
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
-                  <Sparkles size={16} className="text-[var(--accent)]" />
+                  <Sparkles size={18} className="text-[var(--accent)]" />
                   Transcription Model (Whisper)
                 </div>
                 <CustomSelect
@@ -270,16 +275,17 @@ export function SettingsPanel({
                   disabled={isDisabled}
                 />
               </div>
+
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
-                  <Sparkles size={16} className="text-[var(--accent)]" />
+                  <Sparkles size={18} className="text-[var(--accent)]" />
                   Chat Model (Generative AI)
                 </div>
 
                 <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-[var(--glass-border)]">
                   <button
                     onClick={() => onSettingsChange({ chatProvider: 'local' })}
-                    className={`flex-1 text-xs font-medium py-2 rounded-lg transition-colors ${
+                    className={`flex-1 text-sm font-medium py-2.5 rounded-lg transition-colors ${
                       settings.chatProvider === 'local' 
                         ? 'bg-[var(--background)] shadow-sm text-[var(--foreground)]' 
                         : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground)]'
@@ -289,13 +295,13 @@ export function SettingsPanel({
                   </button>
                   <button
                     onClick={() => onSettingsChange({ chatProvider: 'external' })}
-                    className={`flex-1 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 text-sm font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 ${
                       settings.chatProvider === 'external' 
                         ? 'bg-[var(--background)] shadow-sm text-[var(--foreground)]' 
                         : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground)]'
                     }`}
                   >
-                    <Cloud size={12} /> External API
+                    <Cloud size={16} /> External API
                   </button>
                 </div>
 
@@ -307,20 +313,20 @@ export function SettingsPanel({
                     disabled={isDisabled}
                   />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {(!settings.externalModels || settings.externalModels.length === 0 || isAddingModel) ? (
-                      <div className="space-y-3 p-3 bg-black/5 dark:bg-white/5 rounded-xl border border-[var(--glass-border)]">
+                      <div className="space-y-4 p-5 bg-black/5 dark:bg-white/5 rounded-xl border border-[var(--glass-border)]">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-semibold text-[var(--foreground)]">Add New Model</span>
+                          <span className="text-sm font-semibold text-[var(--foreground)]">Add New External Model</span>
                           {(settings.externalModels && settings.externalModels.length > 0) && (
                             <button onClick={() => setIsAddingModel(false)} className="text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors">
-                              <X size={16} />
+                              <X size={18} /> {/* Note: The import X is gone, I will add it back or remove it. Wait, I should import X */}
                             </button>
                           )}
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[var(--foreground-secondary)] flex items-center gap-1.5">
-                            <Globe size={12} /> Base URL (Optional)
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-[var(--foreground-secondary)] flex items-center gap-2">
+                            <Globe size={14} /> Base URL (Optional)
                           </label>
                           <input
                             type="text"
@@ -328,12 +334,12 @@ export function SettingsPanel({
                             value={newExternalApiBaseUrl}
                             onChange={(e) => setNewExternalApiBaseUrl(e.target.value)}
                             disabled={isDisabled}
-                            className="w-full bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
+                            className="w-full bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
                           />
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[var(--foreground-secondary)] flex items-center gap-1.5">
-                            <Key size={12} /> API Key
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-[var(--foreground-secondary)] flex items-center gap-2">
+                            <Key size={14} /> API Key
                           </label>
                           <input
                             type="password"
@@ -341,12 +347,12 @@ export function SettingsPanel({
                             value={newExternalApiKey}
                             onChange={(e) => setNewExternalApiKey(e.target.value)}
                             disabled={isDisabled}
-                            className="w-full bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
+                            className="w-full bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
                           />
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[var(--foreground-secondary)] flex items-center gap-1.5">
-                            <Sparkles size={12} /> Model Name
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-[var(--foreground-secondary)] flex items-center gap-2">
+                            <Sparkles size={14} /> Model Name
                           </label>
                           <input
                             type="text"
@@ -354,32 +360,32 @@ export function SettingsPanel({
                             value={newExternalApiModel}
                             onChange={(e) => setNewExternalApiModel(e.target.value)}
                             disabled={isDisabled}
-                            className="w-full bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
+                            className="w-full bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
                           />
                         </div>
-                        <div className="pt-2">
+                        <div className="pt-4">
                           <button
                             onClick={verifyAndSaveExternalModel}
                             disabled={isVerifying || isDisabled}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--glass-border)] text-xs font-medium text-[var(--foreground)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                           >
                             {isVerifying ? (
-                              <><Loader2 size={12} className="animate-spin" /> Verifying...</>
+                              <><Loader2 size={16} className="animate-spin" /> Verifying...</>
                             ) : (
-                              <><Check size={12} /> Verify & Save Model</>
+                              <><Check size={16} /> Verify & Save Model</>
                             )}
                           </button>
                         </div>
                         {verificationStatus !== 'idle' && (
-                          <div className={`p-2 rounded-lg text-xs font-medium flex items-start gap-1.5 ${verificationStatus === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[var(--error)]/10 text-[var(--error)] border border-[var(--error)]/20'}`}>
-                            {verificationStatus === 'success' ? <Check size={14} className="shrink-0 mt-0.5" /> : <AlertCircle size={14} className="shrink-0 mt-0.5" />}
+                          <div className={`p-3 rounded-lg text-sm font-medium flex items-start gap-2 ${verificationStatus === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[var(--error)]/10 text-[var(--error)] border border-[var(--error)]/20'}`}>
+                            {verificationStatus === 'success' ? <Check size={16} className="shrink-0 mt-0.5" /> : <AlertCircle size={16} className="shrink-0 mt-0.5" />}
                             <span className="leading-snug break-all">{verificationMessage}</span>
                           </div>
                         )}
                       </div>
                     ) : (
                       <>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                           <div className="flex-1 min-w-0">
                             <CustomSelect
                               value={settings.selectedExternalModelId || ''}
@@ -400,27 +406,32 @@ export function SettingsPanel({
                                 selectedExternalModelId: newModels.length > 0 ? newModels[0].id : null
                               });
                             }}
-                            className="p-3 shrink-0 rounded-lg border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-[var(--error)]/10 hover:text-[var(--error)] hover:border-[var(--error)]/20 text-[var(--foreground-secondary)] transition-colors"
+                            className="p-3.5 shrink-0 rounded-xl border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-[var(--error)]/10 hover:text-[var(--error)] hover:border-[var(--error)]/20 text-[var(--foreground-secondary)] transition-colors shadow-sm"
                             title="Delete Selected Model"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={20} />
                           </button>
                         </div>
                         <button
                           onClick={() => setIsAddingModel(true)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-[var(--glass-border)] text-xs font-medium text-[var(--foreground)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all bg-black/5 dark:bg-white/5"
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[var(--glass-border)] text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all bg-black/5 dark:bg-white/5 shadow-sm"
                         >
-                          <Plus size={14} /> Add New Model
+                          <Plus size={18} /> Add New External Model
                         </button>
                       </>
                     )}
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Hardware Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] border-b border-[var(--border)] pb-2">Hardware Acceleration</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
-                  <Cpu size={16} className="text-[var(--accent)]" />
-                  Device
+                  <Cpu size={18} className="text-[var(--accent)]" />
+                  Compute Device
                 </div>
                 <CustomSelect
                   value={settings.device}
@@ -430,39 +441,27 @@ export function SettingsPanel({
                 />
               </div>
 
-              <div className="p-4 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--glass-border)] backdrop-blur-sm">
+              <div className="p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--glass-border)] backdrop-blur-sm mt-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)] mb-2">
-                  <HardDrive size={16} className="text-[var(--foreground-secondary)]" />
-                  <span>Compute Type</span>
+                  <HardDrive size={18} className="text-[var(--foreground-secondary)]" />
+                  <span>Compute Details</span>
                 </div>
-                <p className="text-xs text-[var(--foreground-tertiary)]">
-                  Auto-detected based on device. CPU uses int8, GPU uses float16 for optimal performance.
+                <p className="text-sm text-[var(--foreground-tertiary)]">
+                  The system will automatically select the best compute type based on your device. CPU inference uses `int8` quantization for speed, while GPU uses `float16` for optimal performance.
                 </p>
               </div>
             </div>
 
-            <div className="p-4 border-t border-white/10 flex flex-col gap-3">
-              <button
-                onClick={() => setIsModelManagerOpen(true)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)] text-sm font-medium transition-colors backdrop-blur-sm"
-              >
-                <Database size={16} className="text-[var(--accent)]" />
-                Manage Local Models
-              </button>
-              <p className="text-xs text-[var(--foreground-tertiary)] text-center">
-                Changes apply to next transcription
-              </p>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-    <ModelManager
-      isOpen={isModelManagerOpen}
-      onClose={() => setIsModelManagerOpen(false)}
-      currentModel={settings.model}
-      currentChatModel={settings.chatModel}
-    />
+          </div>
+        </div>
+      </div>
+      
+      <ModelManager
+        isOpen={isModelManagerOpen}
+        onClose={() => setIsModelManagerOpen(false)}
+        currentModel={settings.model}
+        currentChatModel={settings.chatModel}
+      />
     </>
   );
 }
