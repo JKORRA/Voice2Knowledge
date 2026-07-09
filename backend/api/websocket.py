@@ -10,6 +10,7 @@ from backend.core.llm_manager import llm_manager
 from backend.core.state import app_state
 from backend.core.config import settings
 from backend.core.database import db
+from backend.core.title_generator import generate_title_in_background
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +210,22 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
         compute_type = data.get("compute_type", settings.default_compute_type)
         beam_size = data.get("beam_size", settings.default_beam_size)
 
+        chat_model = data.get("chatModel", "qwen2.5-3b")
+        chat_provider = data.get("chatProvider", "local")
+        selected_ext_id = data.get("selectedExternalModelId")
+        ext_models = data.get("externalModels", [])
+        
+        external_api_key = ""
+        external_api_model = ""
+        external_api_base_url = ""
+        
+        for em in ext_models:
+            if em.get("id") == selected_ext_id:
+                external_api_key = em.get("apiKey", "")
+                external_api_model = em.get("name", "")
+                external_api_base_url = em.get("baseUrl", "")
+                break
+
         # Validate files exist
         valid_files = []
         for file_path in files:
@@ -366,6 +383,28 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
         active_sessions.pop(session_id, None)
         await transcriber_instance.unload_model()
         app_state.end_transcription()
+
+        if not cancel_event.is_set():
+            try:
+                cm = locals().get('chat_model', 'qwen2.5-3b')
+                cp = locals().get('chat_provider', 'local')
+                eak = locals().get('external_api_key', '')
+                eam = locals().get('external_api_model', '')
+                eab = locals().get('external_api_base_url', '')
+                
+                asyncio.create_task(
+                    generate_title_in_background(
+                        session_id=session_id,
+                        chat_model=cm,
+                        chat_provider=cp,
+                        external_api_key=eak,
+                        external_api_model=eam,
+                        external_api_base_url=eab
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Failed to spawn background title task: {e}")
+
         try:
             await websocket.close()
         except Exception:
@@ -615,6 +654,19 @@ async def chat_ws(websocket: WebSocket, session_id: str):
             ]
             db.save_chat_session(session_id, chat_model if chat_provider == "local" else external_api_model, messages)
             db.ensure_session(session_id)
+            
+            # Since LLM is loaded and app_state is locked for generation, generate title NOW before releasing lock
+            try:
+                await generate_title_in_background(
+                    session_id=session_id,
+                    chat_model=chat_model,
+                    chat_provider=chat_provider,
+                    external_api_key=external_api_key,
+                    external_api_model=external_api_model,
+                    external_api_base_url=external_api_base_url
+                )
+            except Exception as e:
+                logger.error(f"Error during inline title generation: {e}")
 
     except WebSocketDisconnect:
         logger.info(f"Chat WebSocket disconnected for session {session_id}")
