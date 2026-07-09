@@ -22,7 +22,7 @@ except ImportError:
     pass
 
 class Settings(BaseSettings):
-    default_model: str = "small"
+    default_model: str = "tiny"
     default_language: str = "it"
     default_device: str = "auto"
     default_compute_type: str = "auto"

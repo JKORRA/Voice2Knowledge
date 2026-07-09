@@ -124,6 +124,8 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
     setRenameSessionId(null);
   };
 
+  const visibleSessions = sessions.filter(s => s.title || s.is_generating_title || s.transcription_count > 0 || s.chat_count > 0);
+
   return (
     <>
       <ConfirmModal
@@ -239,9 +241,11 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
             </AnimatePresence>
 
             <AnimatePresence mode="popLayout">
-              {(!isCollapsed && sessions.length > 0) && (
-                <motion.div
-                  initial={{ opacity: 0 }}
+              {!isCollapsed && (
+                visibleSessions.length > 0 ? (
+                  <motion.div
+                    key="session-list"
+                    initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="flex-1 overflow-y-auto"
@@ -253,7 +257,7 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
                   }}
                 >
                   <div className="space-y-1 px-2 pb-20">
-                    {sessions.map((s) => (
+                    {visibleSessions.map((s) => (
                       <div
                         key={s.session_id}
                         onClick={() => {
@@ -315,6 +319,21 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
                   </div>
 
                 </motion.div>
+                ) : (
+                  <motion.div
+                    key="empty-state"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex-1 flex flex-col items-center justify-center p-6 text-center"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-3">
+                      <MessageSquare size={24} className="text-[var(--foreground-tertiary)]" />
+                    </div>
+                    <p className="text-sm font-medium text-[var(--foreground-secondary)]">No chats yet</p>
+                    <p className="text-xs text-[var(--foreground-tertiary)] mt-1">Start a new conversation</p>
+                  </motion.div>
+                )
               )}
             </AnimatePresence>
           </div>

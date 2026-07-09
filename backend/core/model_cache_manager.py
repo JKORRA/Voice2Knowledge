@@ -10,7 +10,7 @@ from backend.core.llm_manager import LLM_MODELS
 logger = logging.getLogger(__name__)
 
 AVAILABLE_MODELS = ['tiny', 'base', 'small', 'medium', 'large-v3']
-AVAILABLE_CHAT_MODELS = ['qwen2.5-3b', 'llama-3.2-1b', 'phi-3.5-mini']
+AVAILABLE_CHAT_MODELS = ['qwen3.5-2b', 'qwen3.5-4b', 'qwen3.5-9b']
 
 
 def get_hf_cache_dir() -> Path:

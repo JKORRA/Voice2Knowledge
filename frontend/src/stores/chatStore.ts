@@ -26,8 +26,8 @@ export const useChatStore = create<ChatState>()(
     (set) => ({
       messages: [],
       settings: {
-        model: 'small',
-        chatModel: 'qwen2.5-3b',
+        model: 'tiny',
+        chatModel: 'qwen3.5-2b',
         device: 'auto',
         computeType: 'auto',
         beamSize: 2,

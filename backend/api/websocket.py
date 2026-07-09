@@ -22,11 +22,14 @@ active_sessions: Dict[str, threading.Event] = {}
 async def setup_ws(websocket: WebSocket):
     await websocket.accept()
     from backend.core.model_manager import model_manager
-    from backend.core.llm_manager import llm_manager
+    from backend.core.llm_manager import llm_manager, LLM_MODELS
     from backend.core.config import settings
 
-    whisper_ready = model_manager.is_model_downloaded(settings.default_model)
-    llm_ready = llm_manager.is_model_downloaded()
+    whisper_model = websocket.query_params.get("whisper_model", settings.default_model)
+    llm_model = websocket.query_params.get("llm_model", llm_manager.current_model_id)
+
+    whisper_ready = model_manager.is_model_downloaded(whisper_model)
+    llm_ready = llm_manager.is_model_downloaded(llm_model)
 
     if whisper_ready and llm_ready:
         await websocket.send_json({"type": "done"})
@@ -58,33 +61,34 @@ async def setup_ws(websocket: WebSocket):
                     "type": "progress",
                     "component": "whisper",
                     "percent": pct,
-                    "message": f"Downloading Transcription Model (Whisper {settings.default_model})"
+                    "message": f"Downloading Transcription Model (Whisper {whisper_model})"
                 })
             
             progress_queue.put_nowait({
                 "type": "progress",
                 "component": "whisper",
                 "percent": 0,
-                "message": f"Starting Download: Transcription Model (Whisper {settings.default_model})"
+                "message": f"Starting Download: Transcription Model (Whisper {whisper_model})"
             })
-            await model_manager.download_model_async(settings.default_model, progress_callback=whisper_cb)
+            await model_manager.download_model_async(whisper_model, progress_callback=whisper_cb)
 
         if not llm_ready:
+            repo_id = LLM_MODELS.get(llm_model, LLM_MODELS["qwen3.5-2b"])["repo_id"]
             def llm_cb(pct):
                 loop.call_soon_threadsafe(progress_queue.put_nowait, {
                     "type": "progress",
                     "component": "llm",
                     "percent": pct,
-                    "message": f"Downloading AI Chat Model ({llm_manager.repo_id.split('/')[-1]})"
+                    "message": f"Downloading AI Chat Model ({repo_id.split('/')[-1]})"
                 })
             
             progress_queue.put_nowait({
                 "type": "progress",
                 "component": "llm",
                 "percent": 0,
-                "message": f"Starting Download: AI Chat Model ({llm_manager.repo_id.split('/')[-1]})"
+                "message": f"Starting Download: AI Chat Model ({repo_id.split('/')[-1]})"
             })
-            await llm_manager.download_model_async(progress_callback=llm_cb)
+            await llm_manager.download_model_async(llm_model, progress_callback=llm_cb)
 
         progress_queue.put_nowait({"type": "done"})
     except Exception as e:
@@ -541,7 +545,7 @@ async def chat_ws(websocket: WebSocket, session_id: str):
             relevant_context = compute_smart_chunks(question, context_text, max_chunks)
             logger.info(f"Smart RAG: Dynamic chunking used. Max chunks allowed: {max_chunks}")
 
-        system_prompt = f"You are an AI assistant. Answer the user's question using ONLY the provided transcription context. Do not make up answers.\n\nContext:\n{relevant_context}"
+        system_prompt = "You are an intelligent AI assistant analyzing audio transcriptions. Answer the user's questions about the transcription accurately. You should rely primarily on the provided context, but you may use your general knowledge to explain concepts, identify famous texts, or provide deeper meaning."
 
         if chat_provider == "local":
             if not llm_manager.is_model_downloaded(chat_model):
@@ -555,10 +559,12 @@ async def chat_ws(websocket: WebSocket, session_id: str):
 
         full_response = ""
         
+        # We need to account for the context tokens now being in the user prompt
+        context_tokens = estimate_tokens(relevant_context)
         system_tokens = estimate_tokens(system_prompt)
         
         # Calculate exactly how much space is left for history after actual RAG allocation
-        available_history_tokens = MAX_CONTEXT_TOKENS - RESPONSE_RESERVE - system_tokens - question_tokens
+        available_history_tokens = MAX_CONTEXT_TOKENS - RESPONSE_RESERVE - system_tokens - question_tokens - context_tokens
         
         # Build history from newest to oldest within the mathematical budget
         dynamic_history = []
@@ -574,12 +580,14 @@ async def chat_ws(websocket: WebSocket, session_id: str):
             dynamic_history.insert(0, msg)
             current_history_tokens += msg_tokens
 
-        logger.info(f"Memory Manager: Packed {len(dynamic_history)} past messages ({current_history_tokens} tokens). System RAG: {system_tokens} tokens. Available History Budget: {available_history_tokens}")
+        logger.info(f"Memory Manager: Packed {len(dynamic_history)} past messages ({current_history_tokens} tokens). System+Context RAG: {system_tokens + context_tokens} tokens. Available History Budget: {available_history_tokens}")
         
         messages_payload = [{"role": "system", "content": system_prompt}]
         for msg in dynamic_history:
             messages_payload.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
-        messages_payload.append({"role": "user", "content": question})
+            
+        final_user_content = f"Relevant Transcription Context:\n<transcription>\n{relevant_context}\n</transcription>\n\nUser Question: {question}"
+        messages_payload.append({"role": "user", "content": final_user_content})
 
         import json
         logger.info(f"\n{'='*50}\nFULL LLM PROMPT PAYLOAD:\n{json.dumps(messages_payload, indent=2, ensure_ascii=False)}\n{'='*50}")

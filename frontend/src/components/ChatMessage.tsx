@@ -3,6 +3,8 @@ import { Bot, User, Copy, Check, FileAudio } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 
+import ReactMarkdown from 'react-markdown';
+
 interface ChatMessageProps {
   msg: {
     content: string;
@@ -92,9 +94,15 @@ export function ChatMessage({ msg }: ChatMessageProps) {
           </div>
         )}
 
-        <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed font-normal">
-          {msg.content}
-        </pre>
+        {role === 'assistant' ? (
+          <div className="prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed font-sans prose-p:leading-relaxed prose-pre:bg-black/10 dark:prose-pre:bg-white/10 prose-pre:border prose-pre:border-[var(--glass-border)] prose-code:text-[var(--accent)] prose-a:text-[var(--accent)] hover:prose-a:text-[var(--accent-hover)] marker:text-[var(--foreground-tertiary)] prose-strong:font-bold prose-strong:text-current">
+            <ReactMarkdown>{msg.content}</ReactMarkdown>
+          </div>
+        ) : (
+          <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed font-normal">
+            {msg.content}
+          </pre>
+        )}
 
         {role === 'assistant' && !msg.isStreaming && (
           <div className="flex gap-2 pt-2 mt-2 border-t border-[var(--border)]">

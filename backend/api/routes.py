@@ -85,8 +85,7 @@ async def list_sessions(
     sessions = db.get_sessions(limit=limit, offset=offset, search=search)
     for s in sessions:
         sid = s["session_id"]
-        is_ws_active = f"transcribe_{sid}" in active_sessions or f"chat_{sid}" in active_sessions
-        s["is_generating_title"] = is_ws_active or (sid in active_title_generations)
+        s["is_generating_title"] = (sid in active_title_generations)
     total = db.get_session_count(search=search)
     return {"sessions": sessions, "total": total, "limit": limit, "offset": offset}
 

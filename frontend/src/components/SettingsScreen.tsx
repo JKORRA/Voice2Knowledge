@@ -16,17 +16,17 @@ interface SettingsScreenProps {
 }
 
 const baseModelOptions = [
-  { value: 'tiny', label: 'Tiny', description: 'Fastest, less accurate' },
-  { value: 'base', label: 'Base', description: 'Balanced' },
-  { value: 'small', label: 'Small', description: 'Recommended (default)' },
-  { value: 'medium', label: 'Medium', description: 'More accurate' },
-  { value: 'large-v3', label: 'Large v3', description: 'Most accurate, slowest' },
+  { value: 'tiny', label: 'Tiny', description: 'Fastest (Recommended default)' },
+  { value: 'base', label: 'Base', description: 'Fast, slightly better accuracy' },
+  { value: 'small', label: 'Small', description: 'Balanced speed and accuracy' },
+  { value: 'medium', label: 'Medium', description: 'High accuracy, slower' },
+  { value: 'large-v3', label: 'Large v3', description: 'State-of-the-art accuracy' },
 ];
 
 const baseChatModelOptions = [
-  { value: 'qwen2.5-3b', label: 'Qwen 2.5 3B', description: 'Tiny, Smart, Fast' },
-  { value: 'llama-3.2-1b', label: 'Llama 3.2 1B', description: 'Small, Fast' },
-  { value: 'phi-3.5-mini', label: 'Phi 3.5 Mini', description: 'Balanced' },
+  { value: 'qwen3.5-2b', label: 'Qwen 3.5 2B', description: 'Best for standard laptops' },
+  { value: 'qwen3.5-4b', label: 'Qwen 3.5 4B', description: 'Strong reasoning, requires good RAM' },
+  { value: 'qwen3.5-9b', label: 'Qwen 3.5 9B', description: 'Premium logic, for high-end machines' },
 ];
 
 const deviceOptions = [

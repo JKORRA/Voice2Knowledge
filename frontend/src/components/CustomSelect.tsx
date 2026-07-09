@@ -34,7 +34,7 @@ export function CustomSelect({ options, value, onChange, disabled }: CustomSelec
   }, []);
 
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={cn("relative w-full transition-all", isOpen ? "z-50" : "z-10")} ref={containerRef}>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}

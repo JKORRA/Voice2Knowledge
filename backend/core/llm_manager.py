@@ -10,23 +10,23 @@ from backend.core.config import settings, APP_DATA_DIR
 logger = logging.getLogger(__name__)
 
 LLM_MODELS = {
-    "qwen2.5-3b": {"repo_id": "Qwen/Qwen2.5-3B-Instruct-GGUF", "filename": "qwen2.5-3b-instruct-q4_k_m.gguf"},
-    "llama-3.2-1b": {"repo_id": "bartowski/Llama-3.2-1B-Instruct-GGUF", "filename": "Llama-3.2-1B-Instruct-Q4_K_M.gguf"},
-    "phi-3.5-mini": {"repo_id": "bartowski/Phi-3.5-mini-instruct-GGUF", "filename": "Phi-3.5-mini-instruct-Q4_K_M.gguf"},
+    "qwen3.5-2b": {"repo_id": "unsloth/Qwen3.5-2B-GGUF", "filename": "Qwen3.5-2B-Q4_K_M.gguf"},
+    "qwen3.5-4b": {"repo_id": "unsloth/Qwen3.5-4B-GGUF", "filename": "Qwen3.5-4B-Q4_K_M.gguf"},
+    "qwen3.5-9b": {"repo_id": "unsloth/Qwen3.5-9B-GGUF", "filename": "Qwen3.5-9B-Q4_K_M.gguf"},
 }
 
 class LLMManager:
     def __init__(self):
         self._lock = asyncio.Lock()
         self._model = None
-        self.current_model_id = "qwen2.5-3b"
+        self.current_model_id = "qwen3.5-2b"
         self.repo_id = LLM_MODELS[self.current_model_id]["repo_id"]
         self.filename = LLM_MODELS[self.current_model_id]["filename"]
         
     def is_model_downloaded(self, model_id: str = None) -> bool:
         """Check if the GGUF model is cached."""
         model_id = model_id or self.current_model_id
-        model_info = LLM_MODELS.get(model_id, LLM_MODELS["qwen2.5-3b"])
+        model_info = LLM_MODELS.get(model_id, LLM_MODELS["qwen3.5-2b"])
         repo_id = model_info["repo_id"]
         filename = model_info["filename"]
         try:
@@ -44,7 +44,7 @@ class LLMManager:
     async def download_model_async(self, model_id: str = None, progress_callback=None):
         """Download the model via huggingface_hub."""
         model_id = model_id or self.current_model_id
-        model_info = LLM_MODELS.get(model_id, LLM_MODELS["qwen2.5-3b"])
+        model_info = LLM_MODELS.get(model_id, LLM_MODELS["qwen3.5-2b"])
         repo_id = model_info["repo_id"]
         filename = model_info["filename"]
         
@@ -108,7 +108,7 @@ class LLMManager:
                 except Exception:
                     pass
 
-    async def generate_stream(self, messages: list, cancel_event: threading.Event, chat_model: str = "qwen2.5-3b"):
+    async def generate_stream(self, messages: list, cancel_event: threading.Event, chat_model: str = "qwen3.5-2b"):
         """Generate response via streaming."""
         async with self._lock:
             if chat_model and chat_model != self.current_model_id:
@@ -123,7 +123,7 @@ class LLMManager:
                         pass
                 
                 self.current_model_id = chat_model
-                model_info = LLM_MODELS.get(chat_model, LLM_MODELS["qwen2.5-3b"])
+                model_info = LLM_MODELS.get(chat_model, LLM_MODELS["qwen3.5-2b"])
                 self.repo_id = model_info["repo_id"]
                 self.filename = model_info["filename"]
 
