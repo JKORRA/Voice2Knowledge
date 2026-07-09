@@ -7,6 +7,8 @@ from backend.core.state import app_state
 
 logger = logging.getLogger(__name__)
 
+active_title_generations = set()
+
 async def generate_title_in_background(
     session_id: str,
     chat_model: str,
@@ -19,6 +21,7 @@ async def generate_title_in_background(
     Analyzes the session's transcriptions and chat history to dynamically generate a title.
     Gracefully aborts if the system is busy with another local model task.
     """
+    active_title_generations.add(session_id)
     try:
         session_data = db.get_session_content(session_id)
         if not session_data:
@@ -132,3 +135,5 @@ async def generate_title_in_background(
             
     except Exception as e:
         logger.error(f"Error in background title generation: {e}")
+    finally:
+        active_title_generations.discard(session_id)

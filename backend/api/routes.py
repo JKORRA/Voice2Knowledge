@@ -16,6 +16,7 @@ TEMP_DIR.mkdir(parents=True, exist_ok=True)
 async def upload_files(files: List[UploadFile] = File(...), session_id: Optional[str] = None):
     if not session_id:
         session_id = str(uuid.uuid4())
+    db.ensure_session(session_id)
     saved_files = []
     
     for file in files:
@@ -73,20 +74,19 @@ async def export_transcription(
         headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
 
-def _make_session_preview(session: dict) -> str:
-    if session.get("title"):
-        return session["title"]
-    return f"Session {session['session_id'][:8]}"
-
 @router.get("/sessions")
 async def list_sessions(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     search: Optional[str] = Query(None),
 ):
+    from backend.core.title_generator import active_title_generations
+    from backend.api.websocket import active_sessions
     sessions = db.get_sessions(limit=limit, offset=offset, search=search)
     for s in sessions:
-        s["title"] = _make_session_preview(s)
+        sid = s["session_id"]
+        is_ws_active = f"transcribe_{sid}" in active_sessions or f"chat_{sid}" in active_sessions
+        s["is_generating_title"] = is_ws_active or (sid in active_title_generations)
     total = db.get_session_count(search=search)
     return {"sessions": sessions, "total": total, "limit": limit, "offset": offset}
 

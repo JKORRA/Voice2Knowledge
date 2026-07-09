@@ -15,6 +15,7 @@ interface Session {
   chat_count: number;
   created_at: string;
   updated_at: string;
+  is_generating_title: boolean;
 }
 
 interface SidebarProps {
@@ -27,11 +28,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSessionId, onSettingsClick }: SidebarProps) {
+  const isTranscribing = useChatStore(state => state.isTranscribing);
+  const isGenerating = useChatStore(state => state.isGenerating);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [search] = useState('');
   const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(20);
   
   // Dropdown state
   const [activeDropdown, setActiveDropdown] = useState<{ id: string, title: string, top: number, left: number } | null>(null);
@@ -44,14 +47,14 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
   // Confirm Modal state
   const [confirmModalState, setConfirmModalState] = useState<{ isOpen: boolean; sessionId: string | null }>({ isOpen: false, sessionId: null });
 
-  const limit = 20;
+
   const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? window.location.host
     : '127.0.0.1:8000';
 
   const fetchSessions = async () => {
     try {
-      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      const params = new URLSearchParams({ limit: String(limit), offset: '0' });
       if (search) params.set('search', search);
 
       const res = await fetch(`http://${host}/api/sessions?${params}`);
@@ -66,7 +69,20 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
   useEffect(() => {
     fetchSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, offset, currentSessionId]);
+  }, [search, limit, currentSessionId, isTranscribing, isGenerating]);
+
+  // Poll for sessions that are currently generating a title
+  useEffect(() => {
+    const isGenerating = sessions.some(s => s.is_generating_title);
+
+    if (!isGenerating) return;
+
+    const intervalId = setInterval(() => {
+      fetchSessions();
+    }, 2000);
+
+    return () => clearInterval(intervalId);
+  }, [sessions, currentSessionId]);
 
   // Click outside to close dropdown
   useEffect(() => {
@@ -229,6 +245,12 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="flex-1 overflow-y-auto"
+                  onScroll={(e) => {
+                    const bottom = e.currentTarget.scrollHeight - e.currentTarget.scrollTop <= e.currentTarget.clientHeight + 10;
+                    if (bottom && sessions.length < total) {
+                      setLimit(prev => prev + 20);
+                    }
+                  }}
                 >
                   <div className="space-y-1 px-2 pb-20">
                     {sessions.map((s) => (
@@ -250,9 +272,18 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
                             "shrink-0",
                             currentSessionId === s.session_id ? "text-[var(--accent)]" : "text-[var(--foreground-tertiary)]"
                           )} />
-                          <p className="text-sm font-medium truncate flex-1">
-                            {s.title}
-                          </p>
+                          {(() => {
+                            const isGenerating = s.is_generating_title || (s.session_id === currentSessionId && !s.title);
+                            const displayTitle = s.title || (isGenerating ? "" : `Session ${s.session_id.substring(0, 8)}`);
+                            
+                            return displayTitle ? (
+                              <p className="text-sm font-medium truncate flex-1">
+                                {displayTitle}
+                              </p>
+                            ) : (
+                              <div className="flex-1 h-5 rounded-md bg-black/10 dark:bg-white/10 animate-pulse" />
+                            );
+                          })()}
                         </div>
                         
                         <button
@@ -283,24 +314,6 @@ export function Sidebar({ isOpen, onClose, onNewChat, onLoadSession, currentSess
                     ))}
                   </div>
 
-                  {total > limit && (
-                    <div className="p-4 flex items-center justify-between">
-                      <button
-                        onClick={() => setOffset(Math.max(0, offset - limit))}
-                        disabled={offset === 0}
-                        className="p-1.5 text-xs rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50"
-                      >
-                        Prev
-                      </button>
-                      <button
-                        onClick={() => setOffset(offset + limit)}
-                        disabled={offset + limit >= total}
-                        className="p-1.5 text-xs rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  )}
                 </motion.div>
               )}
             </AnimatePresence>
