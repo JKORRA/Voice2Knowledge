@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, SquareSquare, Loader2 } from 'lucide-react';
+import { Upload, SquareSquare, Loader2, PanelLeft } from 'lucide-react';
 import { useChatStore } from './stores/chatStore';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useChatWebSocket } from './hooks/useChatWebSocket';
 import { useTheme } from './hooks/useTheme';
-import { Header } from './components/Header';
-import { SettingsPanel } from './components/SettingsPanel';
-import { HistoryPanel } from './components/HistoryPanel';
+import { SettingsScreen } from './components/SettingsScreen';
+import { Sidebar } from './components/Sidebar';
 import { EmptyState } from './components/EmptyState';
 import { ChatMessage } from './components/ChatMessage';
 import { ProgressMessage } from './components/ProgressMessage';
@@ -36,7 +35,7 @@ export default function App() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [showChatInput, setShowChatInput] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<{ paths: string[], names: string[] } | null>(null);
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
@@ -166,6 +165,7 @@ export default function App() {
     useChatStore.getState().setSessionId(null);
     setShowChatInput(false);
     setPendingFiles(null);
+    setShowSettings(false);
   };
 
   const handleLoadSession = async (sessionId: string) => {
@@ -174,6 +174,7 @@ export default function App() {
     const data = await res.json();
     useChatStore.getState().clearMessages();
     useChatStore.getState().setSessionId(sessionId);
+    setShowSettings(false);
     for (const t of data.transcriptions) {
       addMessage({
         role: 'assistant',
@@ -264,127 +265,136 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-transparent text-[var(--foreground)]">
-      <SettingsPanel
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        settings={settings}
-        onSettingsChange={setSettings}
-        isDisabled={isTranscribing}
-        resolvedTheme={resolvedTheme}
-        onThemeToggle={toggleTheme}
-      />
 
-      <HistoryPanel
-        isOpen={showHistory}
-        onClose={() => setShowHistory(false)}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNewChat={handleNewChat}
         onLoadSession={handleLoadSession}
         currentSessionId={sessionId}
+        onSettingsClick={() => setShowSettings(true)}
       />
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <input
-          type="file"
-          multiple
-          accept=".wav,.mp3,.m4a,.flac,.ogg,.webm,.mp4"
-          className="hidden"
-          ref={fileInputRef}
-          onChange={handleFileUpload}
-        />
-        <Header
-          onSettingsClick={() => setShowSettings(true)}
-          onHistoryClick={() => setShowHistory(true)}
-          onNewChat={handleNewChat}
-        />
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center p-4 border-b border-[var(--glass-border)] bg-black/5 dark:bg-white/5 backdrop-blur-sm shrink-0">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors mr-3">
+            <PanelLeft size={20} className="text-[var(--foreground-secondary)]" />
+          </button>
+          <span className="font-semibold text-lg text-[var(--foreground)]">Voice2Knowledge</span>
+        </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          {messages.length === 0 ? (
-            <EmptyState onUploadClick={() => fileInputRef.current?.click()} />
-          ) : (
-            <div className="space-y-6">
-              <AnimatePresence>
-                {messages.map((msg) => (
-                  renderMessage(msg)
-                ))}
-              </AnimatePresence>
-              <div ref={messagesEndRef} />
+        {showSettings ? (
+          <SettingsScreen
+            onClose={() => setShowSettings(false)}
+            settings={settings}
+            onSettingsChange={setSettings}
+            isDisabled={isTranscribing}
+            resolvedTheme={resolvedTheme}
+            onThemeToggle={toggleTheme}
+          />
+        ) : (
+          <>
+            <input
+              type="file"
+              multiple
+              accept=".wav,.mp3,.m4a,.flac,.ogg,.webm,.mp4"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+            />
+
+            <div className="flex-1 overflow-y-auto p-4 md:p-8">
+              {messages.length === 0 ? (
+                <EmptyState onUploadClick={() => fileInputRef.current?.click()} />
+              ) : (
+                <div className="space-y-6">
+                  <AnimatePresence>
+                    {messages.map((msg) => (
+                      renderMessage(msg)
+                    ))}
+                  </AnimatePresence>
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {(messages.length > 0 || pendingFiles) && (
-          <div className="glass-panel rounded-t-2xl border-b-0 border-x-0 sm:border-x sm:border-b sm:rounded-2xl sm:mb-4 sm:mx-4 p-4 shadow-xl">
-          <div className="max-w-4xl mx-auto relative flex items-center gap-2">
-            {!showChatInput ? (
-              <div className="flex-1 flex gap-2">
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                  disabled={isTranscribing || isUploading || isGenerating}
-                  className={cn(
-                    'flex-1 py-4 px-6 rounded-xl border border-dashed flex items-center justify-center gap-3 transition-all duration-300 glass-panel glass-panel-hover',
-                    (isTranscribing || isUploading || isGenerating)
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:border-[var(--accent)] text-[var(--foreground)] hover:text-[var(--accent)]'
-                  )}
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="animate-spin" size={20} />
-                      <span className="font-medium">Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={20} />
-                      <span className="font-medium">Upload audio files to transcribe</span>
-                    </>
-                  )}
-                </button>
+            {(messages.length > 0 || pendingFiles) && (
+              <div className="glass-panel rounded-t-2xl border-b-0 border-x-0 sm:border-x sm:border-b sm:rounded-2xl sm:mb-4 sm:mx-4 p-4 shadow-xl">
+              <div className="max-w-4xl mx-auto relative flex items-center gap-2">
+                {!showChatInput ? (
+                  <div className="flex-1 flex gap-2">
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                      disabled={isTranscribing || isUploading || isGenerating}
+                      className={cn(
+                        'flex-1 py-4 px-6 rounded-xl border border-dashed flex items-center justify-center gap-3 transition-all duration-300 glass-panel glass-panel-hover',
+                        (isTranscribing || isUploading || isGenerating)
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:border-[var(--accent)] text-[var(--foreground)] hover:text-[var(--accent)]'
+                      )}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="animate-spin" size={20} />
+                          <span className="font-medium">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={20} />
+                          <span className="font-medium">Upload audio files to transcribe</span>
+                        </>
+                      )}
+                    </button>
 
-                {/* Bug Fix: Allow returning to chat if there are transcriptions available */}
-                {sessionId && messages.some(m => m.type === 'result') && !isTranscribing && !isUploading && (
-                  <button
-                    onClick={() => setShowChatInput(true)}
-                    className="shrink-0 px-6 py-4 rounded-xl border glass-panel glass-panel-hover text-[var(--foreground)] transition-colors font-medium shadow-md"
-                  >
-                    Return to Chat
-                  </button>
-                )}
+                    {/* Bug Fix: Allow returning to chat if there are transcriptions available */}
+                    {sessionId && messages.some(m => m.type === 'result') && !isTranscribing && !isUploading && (
+                      <button
+                        onClick={() => setShowChatInput(true)}
+                        className="shrink-0 px-6 py-4 rounded-xl border glass-panel glass-panel-hover text-[var(--foreground)] transition-colors font-medium shadow-md"
+                      >
+                        Return to Chat
+                      </button>
+                    )}
 
-                {isTranscribing && (
-                  <button
-                    onClick={cancelTranscription}
-                    className="shrink-0 px-4 py-3 rounded-xl bg-[var(--error)]/20 text-[var(--error)] border border-[var(--error)]/30 hover:bg-[var(--error)]/40 flex items-center gap-2 font-medium transition-colors shadow-md backdrop-blur-md"
-                  >
-                    <SquareSquare size={18} />
-                    <span className="hidden sm:inline">Stop</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="w-full flex flex-col items-center">
-                <div className="w-full flex items-end gap-2">
-                  <div className="flex-1 w-full">
-                    <ChatInput
-                      onSend={handleSendQuestion}
-                      onStartTranscription={handleStartTranscription}
-                      pendingFiles={pendingFiles}
-                      onCancel={cancelGeneration}
-                      onUploadClick={() => fileInputRef.current?.click()}
-                      isGenerating={isGenerating}
-                      isUploading={isUploading}
-                      onClearPendingFiles={cancelUpload}
-                      disabled={isTranscribing || (!sessionId && !pendingFiles)}
-                    />
+                    {isTranscribing && (
+                      <button
+                        onClick={cancelTranscription}
+                        className="shrink-0 px-4 py-3 rounded-xl bg-[var(--error)]/20 text-[var(--error)] border border-[var(--error)]/30 hover:bg-[var(--error)]/40 flex items-center gap-2 font-medium transition-colors shadow-md backdrop-blur-md"
+                      >
+                        <SquareSquare size={18} />
+                        <span className="hidden sm:inline">Stop</span>
+                      </button>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-center gap-4 mt-3 text-xs font-medium text-[var(--foreground-tertiary)]">
-                  <span>Transcription Model: Whisper {settings.model}</span>
-                  <span>•</span>
-                  <span>Chat Model: {settings.chatProvider === 'external' ? (settings.externalModels?.find(m => m.id === settings.selectedExternalModelId)?.name || 'External API') : (settings.chatModel === 'qwen2.5-3b' ? 'Qwen 2.5 3B' : settings.chatModel === 'llama-3.2-1b' ? 'Llama 3.2 1B' : 'Phi 3.5 Mini')}</span>
-                </div>
+                ) : (
+                  <div className="w-full flex flex-col items-center">
+                    <div className="w-full flex items-end gap-2">
+                      <div className="flex-1 w-full">
+                        <ChatInput
+                          onSend={handleSendQuestion}
+                          onStartTranscription={handleStartTranscription}
+                          pendingFiles={pendingFiles}
+                          onCancel={cancelGeneration}
+                          onUploadClick={() => fileInputRef.current?.click()}
+                          isGenerating={isGenerating}
+                          isUploading={isUploading}
+                          onClearPendingFiles={cancelUpload}
+                          disabled={isTranscribing || (!sessionId && !pendingFiles)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3 text-xs font-medium text-[var(--foreground-tertiary)]">
+                      <span>Transcription Model: Whisper {settings.model}</span>
+                      <span>•</span>
+                      <span>Chat Model: {settings.chatProvider === 'external' ? (settings.externalModels?.find(m => m.id === settings.selectedExternalModelId)?.name || 'External API') : (settings.chatModel === 'qwen2.5-3b' ? 'Qwen 2.5 3B' : settings.chatModel === 'llama-3.2-1b' ? 'Llama 3.2 1B' : 'Phi 3.5 Mini')}</span>
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
             )}
-          </div>
-        </div>
+          </>
         )}
       </div>
     </div>

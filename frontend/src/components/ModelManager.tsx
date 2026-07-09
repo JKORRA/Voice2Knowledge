@@ -2,6 +2,7 @@ import { useState, useEffect, startTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Trash2, Sparkles, Loader2, CheckCircle, Circle, Mic, MessageSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { ConfirmModal } from './ConfirmModal';
 
 interface Model {
   name: string;
@@ -20,6 +21,7 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [confirmModalState, setConfirmModalState] = useState<{ isOpen: boolean; modelName: string | null }>({ isOpen: false, modelName: null });
 
   const fetchModels = async () => {
     setLoading(true);
@@ -62,8 +64,13 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
     }
   };
 
-  const handleDelete = async (modelName: string) => {
-    if (!confirm(`Are you sure you want to delete the ${modelName} model?`)) return;
+  const handleDelete = (modelName: string) => {
+    setConfirmModalState({ isOpen: true, modelName });
+  };
+
+  const confirmDelete = async () => {
+    const modelName = confirmModalState.modelName;
+    if (!modelName) return;
 
     try {
       const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -75,6 +82,7 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
     } catch (err) {
       console.error('Delete failed:', err);
     }
+    setConfirmModalState({ isOpen: false, modelName: null });
   };
 
   const getModelDescription = (name: string) => {
@@ -161,9 +169,18 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
+    <>
+      <ConfirmModal
+        isOpen={confirmModalState.isOpen}
+        title="Delete Model"
+        message={`Are you sure you want to delete the ${confirmModalState.modelName} model? This action will remove the model from disk.`}
+        confirmText="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmModalState({ isOpen: false, modelName: null })}
+      />
+      <AnimatePresence>
+        {isOpen && (
+          <>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -237,5 +254,6 @@ export function ModelManager({ isOpen, onClose, currentModel, currentChatModel }
         </>
       )}
     </AnimatePresence>
+    </>
   );
 }
