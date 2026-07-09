@@ -2,9 +2,7 @@
 
 A premium, privacy-first local audio transcription and AI assistant. All processing happens entirely on your device — your audio and conversations never leave your machine. Transcribe files and chat naturally with a fully local LLM that intelligently remembers your conversations and references your transcriptions.
 
-<p align="center">
-  <img src="assets/voice2knowledge.gif" alt="Voice2Knowledge demo" width="600">
-</p>
+https://github.com/user-attachments/assets/ffb2c052-54d6-44f2-bbdf-06e6d8e168ea
 
 ## Key Features
 - **Privacy First**: 100% offline, local processing by default. Your data is yours. Optional support for cloud APIs if desired.
