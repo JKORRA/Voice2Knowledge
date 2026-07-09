@@ -93,8 +93,8 @@ All models are downloaded on demand when first selected. Switch anytime in **Set
 **Whisper** (transcription, via faster-whisper):
 | Size | Default |
 |------|---------|
-| `tiny`, `base` | |
-| `small` | ✅ Default |
+| `tiny` | ✅ Default |
+| `base`, `small` | |
 | `medium`, `large-v3` | |
 
 **LLM** (chat, via llama.cpp — all GGUF format):
