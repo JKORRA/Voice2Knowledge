@@ -12,6 +12,8 @@ A premium, privacy-first local audio transcription and AI assistant. All process
 - **Advanced AI Memory**: Features a ChatGPT-style Token-Aware Dynamic Memory system. It mathematically balances context limits to remember dozens of previous chat messages seamlessly without crashing.
 - **Bring Your Own API**: Save and manage multiple external AI providers (OpenAI, Anthropic, Gemini, Groq) via a built-in `litellm` integration.
 - **Automatic RAG Engine**: Uses a pure-Python TF-IDF engine to instantly chunk and retrieve the most relevant pieces of your transcriptions based on your questions. No manual context selection required!
+- **Automated Contextual Titles**: Generates concise, context-aware session titles completely in the background without interrupting your workflow.
+- **Rich Markdown Rendering**: Chat interface natively supports and styles Markdown, beautifully rendering code blocks, emphasis, and structured lists.
 - **GPU Acceleration**: Auto-detects NVIDIA GPUs (via `ctranslate2` & `nvidia-smi`) for lightning-fast transcription, or gracefully falls back to CPU processing.
 - **History & Export**: Saves all your sessions. Export your transcriptions to TXT, PDF, or DOCX.
 
@@ -95,12 +97,12 @@ All models are downloaded on demand when first selected. Switch anytime in **Set
 | `small` | ✅ Default |
 | `medium`, `large-v3` | |
 
-**LLM** (chat, via llama.cpp — all GGUF Q4_K_M):
+**LLM** (chat, via llama.cpp — all GGUF format):
 | Model | Size | Default |
 |-------|------|---------|
-| Qwen 2.5 3B Instruct | ~1.8 GB | ✅ Default |
-| Llama 3.2 1B Instruct | ~0.7 GB | |
-| Phi 3.5 Mini Instruct | ~2.2 GB | |
+| Qwen 3.5 2B (Q4_K_M) | ~1.2 GB | ✅ Default |
+| Qwen 3.5 4B (Q4_K_M) | ~2.4 GB | |
+| Qwen 3.5 9B (Q4_K_M) | ~5.3 GB | |
 
 **External API Providers** (via LiteLLM):
 If you prefer not to use your local hardware for chat, you can configure external providers in **Settings → External API**.
