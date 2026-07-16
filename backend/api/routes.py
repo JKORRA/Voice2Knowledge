@@ -1,8 +1,10 @@
+import os
+import json
 import shutil
 import uuid
 from pathlib import Path
-from typing import List, Optional
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Body
 
 from backend.core.config import settings
 from backend.core.database import db
@@ -45,6 +47,35 @@ async def get_settings():
         "default_compute_type": settings.default_compute_type,
         "output_dir": str(settings.output_dir),
     }
+
+USER_SETTINGS_PATH = settings.output_dir.parent / "user_settings.json"
+
+@router.get("/user-settings")
+async def get_user_settings():
+    if USER_SETTINGS_PATH.exists():
+        try:
+            with open(USER_SETTINGS_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+@router.post("/user-settings")
+async def save_user_settings(payload: Dict[str, Any] = Body(...)):
+    try:
+        with open(USER_SETTINGS_PATH, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/validate-path")
+async def validate_path(path: str = Query(...)):
+    try:
+        exists = Path(path).is_file()
+        return {"exists": exists}
+    except Exception:
+        return {"exists": False}
 
 @router.get("/export/{transcription_id}")
 async def export_transcription(

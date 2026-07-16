@@ -51,6 +51,21 @@ def on_closed():
     logger.info("Window closed. Exiting...")
     os._exit(0)
 
+class Api:
+    def open_file_dialog(self):
+        try:
+            window = webview.windows[0]
+            file_types = ('GGUF Files (*.gguf)', 'All files (*.*)')
+            result = window.create_file_dialog(
+                webview.FileDialog.OPEN, allow_multiple=False, file_types=file_types
+            )
+            if result and len(result) > 0:
+                return result[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error in open_file_dialog: {e}")
+            return None
+
 def main():
     port = find_free_port()
     logger.info(f"Starting server on port {port}")
@@ -195,7 +210,7 @@ def main():
     </html>
     """
 
-    window = webview.create_window('Voice2Knowledge', html=splash_html, width=1000, height=800)
+    window = webview.create_window('Voice2Knowledge', html=splash_html, width=1000, height=800, js_api=Api())
     window.events.closed += on_closed
 
     def redirect_when_ready():

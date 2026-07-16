@@ -29,7 +29,7 @@ async def setup_ws(websocket: WebSocket):
     llm_model = websocket.query_params.get("llm_model", llm_manager.current_model_id)
 
     whisper_ready = model_manager.is_model_downloaded(whisper_model)
-    llm_ready = llm_manager.is_model_downloaded(llm_model)
+    llm_ready = True if llm_model == "skip" else llm_manager.is_model_downloaded(llm_model)
 
     if whisper_ready and llm_ready:
         await websocket.send_json({"type": "done"})
@@ -176,14 +176,6 @@ async def download_model_ws(websocket: WebSocket, model_type: str, model_name: s
 async def transcribe_ws(websocket: WebSocket, session_id: str):
     await websocket.accept()
     
-    if not app_state.start_transcription():
-        await websocket.send_json({"type": "error", "message": "System is currently busy generating an answer. Please wait."})
-        await websocket.close()
-        return
-
-    # Unload LLM if it's currently loaded
-    await llm_manager.unload_model()
-
     cancel_event = threading.Event()
     active_sessions[session_id] = cancel_event
 
@@ -203,8 +195,19 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
 
     forwarder_task = asyncio.create_task(queue_forwarder())
 
+    has_lock = False
     try:
         data = await websocket.receive_json()
+        
+        if not app_state.start_transcription():
+            await websocket.send_json({"type": "error", "message": "System is currently busy generating an answer. Please wait."})
+            return
+            
+        has_lock = True
+        
+        # Unload LLM if it's currently loaded
+        await llm_manager.unload_model()
+        
         files = data.get("files", [])
         model_size = data.get("model", settings.default_model)
         language = data.get("language")
@@ -386,7 +389,8 @@ async def transcribe_ws(websocket: WebSocket, session_id: str):
             pass
         active_sessions.pop(session_id, None)
         await transcriber_instance.unload_model()
-        app_state.end_transcription()
+        if has_lock:
+            app_state.end_transcription()
 
         if not cancel_event.is_set():
             try:

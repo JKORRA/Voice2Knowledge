@@ -104,33 +104,49 @@ export const useChatWebSocket = (sessionId: string | null) => {
   }, [connect]);
 
   const sendQuestion = useCallback((question: string) => {
-    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+    const doSend = (socket: WebSocket) => {
+      const { settings } = useChatStore.getState();
+      const activeExtModel = settings.externalModels?.find(m => m.id === settings.selectedExternalModelId);
+      setGeneratingStatus(true);
+      socket.send(JSON.stringify({ 
+        question,
+        chat_model: settings.chatModel,
+        chat_provider: settings.chatProvider,
+        external_api_base_url: activeExtModel?.baseUrl || "",
+        external_api_key: activeExtModel?.apiKey || "",
+        external_api_model: activeExtModel?.name || ""
+      }));
+    };
+
+    if (!ws.current || ws.current.readyState === WebSocket.CLOSED || ws.current.readyState === WebSocket.CLOSING) {
       connect();
     }
     
-    // Give it a tiny bit of time to connect if it was closed
-    setTimeout(() => {
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            const { settings } = useChatStore.getState();
-            const activeExtModel = settings.externalModels?.find(m => m.id === settings.selectedExternalModelId);
-            setGeneratingStatus(true);
-            ws.current.send(JSON.stringify({ 
-              question,
-              chat_model: settings.chatModel,
-              chat_provider: settings.chatProvider,
-              external_api_base_url: activeExtModel?.baseUrl || "",
-              external_api_key: activeExtModel?.apiKey || "",
-              external_api_model: activeExtModel?.name || ""
-            }));
-        } else {
-            addMessage({
-                role: 'assistant',
-                type: 'error',
-                content: "Cannot connect to chat server."
-            });
+    if (ws.current) {
+        if (ws.current.readyState === WebSocket.OPEN) {
+            doSend(ws.current);
+        } else if (ws.current.readyState === WebSocket.CONNECTING) {
+            // Wait for it to open
+            const socket = ws.current;
+            const originalOnOpen = socket.onopen;
+            socket.onopen = (e) => {
+                if (originalOnOpen) originalOnOpen.call(socket, e);
+                doSend(socket);
+            };
+            
+            // Add a timeout in case it never connects
+            setTimeout(() => {
+                if (socket.readyState !== WebSocket.OPEN) {
+                    addMessage({
+                        role: 'assistant',
+                        type: 'error',
+                        content: "Cannot connect to chat server. Connection timed out."
+                    });
+                    setGeneratingStatus(false);
+                }
+            }, 3000);
         }
-    }, 100);
-
+    }
   }, [connect, setGeneratingStatus, addMessage]);
 
   const cancelGeneration = useCallback(() => {

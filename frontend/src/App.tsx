@@ -26,7 +26,8 @@ export default function App() {
     showSettings,
     setShowSettings,
     addMessage,
-    isGenerating
+    isGenerating,
+    initSettings
   } = useChatStore();
 
   const { sendFiles, cancelTranscription } = useWebSocket(sessionId);
@@ -59,6 +60,11 @@ export default function App() {
   const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? window.location.host
     : '127.0.0.1:8000';
+
+  useEffect(() => {
+    initSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetch(`http://${host}/api/setup/status`)
@@ -196,13 +202,71 @@ export default function App() {
     }
   };
 
-  const handleSendQuestion = (question: string) => {
+  const checkChatModelValid = async (): Promise<boolean> => {
+    if (settings.chatProvider === 'external') return true;
+    
+    const isCustomPath = settings.chatModel.includes('/') || settings.chatModel.includes('\\') || settings.chatModel.endsWith('.gguf');
+    
+    try {
+      if (!isCustomPath) {
+        const res = await fetch(`http://${host}/api/models`);
+        const data = await res.json();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const modelInfo = data.models.find((m: any) => m.name === settings.chatModel && m.type === 'chat');
+        if (modelInfo && modelInfo.downloaded) return true;
+      } else {
+        const res = await fetch(`http://${host}/api/validate-path?path=${encodeURIComponent(settings.chatModel)}`);
+        const data = await res.json();
+        if (data.exists) return true;
+      }
+    } catch (e) {
+      console.error('Model validation failed', e);
+    }
+    
+    return false;
+  };
+
+  const handleSendQuestion = async (question: string) => {
+    const isValid = await checkChatModelValid();
+    if (!isValid) {
+      addMessage({
+        role: 'assistant',
+        type: 'error',
+        content: 'Your selected chat model could not be found. It may have been deleted. Please open Settings and select or download a valid AI model.'
+      });
+      // Fallback
+      setSettings({ chatModel: 'qwen3.5-2b' });
+      return;
+    }
+
     addMessage({
       role: 'user',
       type: 'text',
       content: question
     });
     sendQuestion(question);
+  };
+
+  const getChatModelDisplay = () => {
+    if (settings.chatProvider === 'external') {
+      return settings.externalModels?.find(m => m.id === settings.selectedExternalModelId)?.name || 'External API';
+    }
+    const builtin: Record<string, string> = {
+      'qwen3.5-2b': 'Qwen 3.5 2B',
+      'qwen3.5-4b': 'Qwen 3.5 4B',
+      'qwen3.5-9b': 'Qwen 3.5 9B'
+    };
+    if (builtin[settings.chatModel]) return builtin[settings.chatModel];
+    
+    const custom = settings.customLocalModels?.find(m => m.path === settings.chatModel);
+    if (custom) return custom.name;
+    
+    if (settings.chatModel && settings.chatModel !== 'skip') {
+      const filename = settings.chatModel.split('/').pop() || settings.chatModel;
+      return `Custom: ${filename}`;
+    }
+    
+    return 'Local Model';
   };
 
   const renderMessage = (msg: typeof messages[0]) => {
@@ -387,7 +451,7 @@ export default function App() {
                     <div className="flex items-center gap-4 mt-3 text-xs font-medium text-[var(--foreground-tertiary)]">
                       <span>Transcription Model: Whisper {settings.model.charAt(0).toUpperCase() + settings.model.slice(1)}</span>
                       <span>•</span>
-                      <span>Chat Model: {settings.chatProvider === 'external' ? (settings.externalModels?.find(m => m.id === settings.selectedExternalModelId)?.name || 'External API') : (settings.chatModel === 'qwen3.5-2b' ? 'Qwen 3.5 2B' : settings.chatModel === 'qwen3.5-4b' ? 'Qwen 3.5 4B' : settings.chatModel === 'qwen3.5-9b' ? 'Qwen 3.5 9B' : 'Local Model')}</span>
+                      <span>Chat Model: {getChatModelDisplay()}</span>
                     </div>
                   </div>
                 )}

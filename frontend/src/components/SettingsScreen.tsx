@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Cpu, HardDrive, Sparkles, Database, Moon, Sun, Cloud, Globe, Key, Check, Loader2, AlertCircle, Plus, Trash2, ArrowLeft, X } from 'lucide-react';
+import { Cpu, HardDrive, Sparkles, Moon, Sun, Cloud, Globe, Key, Check, Loader2, AlertCircle, Plus, Trash2, ArrowLeft, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { Settings as SettingsType } from '../types';
 import { DownloadConfirmModal } from './DownloadConfirmModal';
-import { ModelManager } from './ModelManager';
+import { ConfirmModal } from './ConfirmModal';
 import { CustomSelect } from './CustomSelect';
 
 interface SettingsScreenProps {
@@ -49,12 +49,9 @@ export function SettingsScreen({
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [pendingModelDownload, setPendingModelDownload] = useState<{ name: string, type: 'whisper' | 'chat' } | null>(null);
 
-  // Model Manager State
-  const [isModelManagerOpen, setIsModelManagerOpen] = useState(false);
-
   // Verification State
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [verificationMessage, setVerificationMessage] = useState('');
 
   // External Model Add State
@@ -62,6 +59,19 @@ export function SettingsScreen({
   const [newExternalApiBaseUrl, setNewExternalApiBaseUrl] = useState('');
   const [newExternalApiKey, setNewExternalApiKey] = useState('');
   const [newExternalApiModel, setNewExternalApiModel] = useState('');
+
+  // Custom Local Model Add State
+  const [isAddingCustomLocal, setIsAddingCustomLocal] = useState(false);
+  const [newCustomLocalName, setNewCustomLocalName] = useState('');
+  const [newCustomLocalPath, setNewCustomLocalPath] = useState('');
+  
+  const [deleteModelConfirm, setDeleteModelConfirm] = useState<{
+    isOpen: boolean;
+    modelName: string;
+    isCustom: boolean;
+    path?: string;
+    type: 'whisper' | 'chat';
+  }>({ isOpen: false, modelName: '', isCustom: false, type: 'whisper' });
 
   const fetchStatuses = () => {
     const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -82,9 +92,25 @@ export function SettingsScreen({
 
   useEffect(() => {
     fetchStatuses();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVerificationStatus('idle');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVerificationMessage('');
   }, []);
+
+  useEffect(() => {
+    // Migration for legacy raw paths
+    if (settings.chatProvider === 'local' && 
+        settings.chatModel && 
+        settings.chatModel !== 'skip' &&
+        !baseChatModelOptions.some(opt => opt.value === settings.chatModel) &&
+        !(settings.customLocalModels || []).some(m => m.path === settings.chatModel)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsAddingCustomLocal(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNewCustomLocalPath(settings.chatModel);
+    }
+  }, [settings.chatProvider, settings.chatModel, settings.customLocalModels]);
 
   const verifyAndSaveExternalModel = async () => {
     if (!newExternalApiKey || !newExternalApiModel) {
@@ -150,8 +176,11 @@ export function SettingsScreen({
   };
 
   const handleModelChange = (modelName: string, type: 'whisper' | 'chat') => {
-    if (modelStatuses[modelName]) {
-      // Already downloaded, just apply
+    // Treat absolute paths or .gguf files as inherently "downloaded"
+    const isCustomPath = modelName.includes('/') || modelName.includes('\\') || modelName.endsWith('.gguf');
+    
+    if (modelStatuses[modelName] || isCustomPath) {
+      // Already downloaded or custom local file, just apply
       if (type === 'whisper') {
         onSettingsChange({ model: modelName });
       } else {
@@ -201,6 +230,35 @@ export function SettingsScreen({
         onConfirm={() => {}}
         onCancel={handleDownloadCancel}
         onComplete={handleDownloadComplete}
+      />
+      
+      <ConfirmModal
+        isOpen={deleteModelConfirm.isOpen}
+        title={deleteModelConfirm.isCustom ? "Remove Custom Model" : "Delete Model from Disk"}
+        message={deleteModelConfirm.isCustom 
+          ? `Are you sure you want to remove the shortcut to "${deleteModelConfirm.modelName}"? The actual .gguf file will not be deleted from your disk.`
+          : `Are you sure you want to delete the built-in ${deleteModelConfirm.modelName} model? This action will remove the model from disk and you will have to download it again.`
+        }
+        confirmText={deleteModelConfirm.isCustom ? "Remove" : "Delete"}
+        onConfirm={async () => {
+          if (deleteModelConfirm.isCustom && deleteModelConfirm.path) {
+            const newModels = (settings.customLocalModels || []).filter(m => m.path !== deleteModelConfirm.path);
+            onSettingsChange({
+              customLocalModels: newModels,
+              chatModel: settings.chatModel === deleteModelConfirm.path ? 'qwen3.5-2b' : settings.chatModel
+            });
+          } else if (!deleteModelConfirm.isCustom && deleteModelConfirm.modelName) {
+            try {
+              const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? window.location.host : '127.0.0.1:8000';
+              await fetch(`http://${host}/api/models/${deleteModelConfirm.modelName}`, { method: 'DELETE' });
+              fetchStatuses();
+            } catch (err) {
+              console.error('Delete failed:', err);
+            }
+          }
+          setDeleteModelConfirm({ isOpen: false, modelName: '', isCustom: false, type: 'whisper' });
+        }}
+        onCancel={() => setDeleteModelConfirm({ isOpen: false, modelName: '', isCustom: false, type: 'whisper' })}
       />
 
       <div className="flex-1 w-full h-full overflow-y-auto p-4 md:p-8 bg-transparent">
@@ -254,13 +312,6 @@ export function SettingsScreen({
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-[var(--foreground)] border-b border-[var(--border)] pb-2 flex items-center justify-between">
                 <span>AI Models</span>
-                <button
-                  onClick={() => setIsModelManagerOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)] text-xs font-medium transition-colors"
-                >
-                  <Database size={14} className="text-[var(--accent)]" />
-                  Manage Local Models
-                </button>
               </h3>
               
               <div className="space-y-4">
@@ -268,12 +319,25 @@ export function SettingsScreen({
                   <Sparkles size={18} className="text-[var(--accent)]" />
                   Transcription Model (Whisper)
                 </div>
-                <CustomSelect
-                  value={settings.model}
-                  onChange={(val) => handleModelChange(val, 'whisper')}
-                  options={modelOptions}
-                  disabled={isDisabled}
-                />
+                <div className="flex gap-3">
+                  <div className="flex-1 min-w-0">
+                    <CustomSelect
+                      value={settings.model}
+                      onChange={(val) => handleModelChange(val, 'whisper')}
+                      options={modelOptions.map(opt => ({ ...opt, description: `(Built-in) ${opt.description}` }))}
+                      disabled={isDisabled}
+                    />
+                  </div>
+                  {modelStatuses[settings.model] && (
+                    <button
+                      onClick={() => setDeleteModelConfirm({ isOpen: true, modelName: settings.model, isCustom: false, type: 'whisper' })}
+                      className="p-3.5 shrink-0 rounded-xl border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-[var(--error)]/10 hover:text-[var(--error)] hover:border-[var(--error)]/20 text-[var(--foreground-secondary)] transition-colors shadow-sm"
+                      title="Delete Built-in Model from Disk"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -306,12 +370,140 @@ export function SettingsScreen({
                 </div>
 
                 {settings.chatProvider === 'local' ? (
-                  <CustomSelect
-                    value={settings.chatModel}
-                    onChange={(val) => handleModelChange(val, 'chat')}
-                    options={chatModelOptions}
-                    disabled={isDisabled}
-                  />
+                  <div className="space-y-4">
+                    {!isAddingCustomLocal ? (
+                      <div className="flex gap-3">
+                        <div className="flex-1 min-w-0">
+                          <CustomSelect
+                            value={settings.chatModel}
+                            onChange={(val) => {
+                              if (val === 'add_custom') {
+                                setIsAddingCustomLocal(true);
+                              } else {
+                                handleModelChange(val, 'chat');
+                              }
+                            }}
+                            options={[
+                              ...chatModelOptions.map(opt => ({ ...opt, description: `(Built-in) ${opt.description}` })),
+                              ...(settings.customLocalModels || []).map(m => ({
+                                value: m.path,
+                                label: m.name,
+                                description: '(Custom) Saved Local File'
+                              })),
+                              { value: 'add_custom', label: 'Add Custom Local Model...', description: 'Provide an absolute path to a .gguf file' }
+                            ]}
+                            disabled={isDisabled}
+                          />
+                        </div>
+                        {(settings.customLocalModels?.some(m => m.path === settings.chatModel) || (!settings.customLocalModels?.some(m => m.path === settings.chatModel) && modelStatuses[settings.chatModel])) && (
+                          <button
+                            onClick={() => {
+                              const isCustom = settings.customLocalModels?.some(m => m.path === settings.chatModel);
+                              if (isCustom) {
+                                const model = settings.customLocalModels?.find(m => m.path === settings.chatModel);
+                                if (model) {
+                                  setDeleteModelConfirm({ isOpen: true, modelName: model.name, isCustom: true, path: model.path, type: 'chat' });
+                                }
+                              } else {
+                                setDeleteModelConfirm({ isOpen: true, modelName: settings.chatModel, isCustom: false, type: 'chat' });
+                              }
+                            }}
+                            className="p-3.5 shrink-0 rounded-xl border border-[var(--glass-border)] bg-black/5 dark:bg-white/5 hover:bg-[var(--error)]/10 hover:text-[var(--error)] hover:border-[var(--error)]/20 text-[var(--foreground-secondary)] transition-colors shadow-sm"
+                            title={settings.customLocalModels?.some(m => m.path === settings.chatModel) ? "Remove Custom Model" : "Delete Built-in Model from Disk"}
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-4 p-5 bg-black/5 dark:bg-white/5 rounded-xl border border-[var(--glass-border)]">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-[var(--foreground)]">Add Custom Local Model</span>
+                          <button onClick={() => {
+                            setIsAddingCustomLocal(false);
+                            if (settings.chatModel === newCustomLocalPath || !settings.chatModel) {
+                              onSettingsChange({ chatModel: 'qwen3.5-2b' });
+                            }
+                          }} className="text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors">
+                            <X size={18} />
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-[var(--foreground-secondary)] flex items-center gap-2">
+                            <Sparkles size={14} /> Model Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. My Llama 3 8B"
+                            value={newCustomLocalName}
+                            onChange={(e) => setNewCustomLocalName(e.target.value)}
+                            disabled={isDisabled}
+                            className="w-full bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-[var(--foreground-secondary)] flex items-center gap-2">
+                            <HardDrive size={14} /> GGUF File Path
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="/absolute/path/to/model.gguf"
+                              value={newCustomLocalPath}
+                              onChange={(e) => setNewCustomLocalPath(e.target.value)}
+                              disabled={isDisabled}
+                              className="flex-1 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)] transition-colors placeholder:text-[var(--foreground-tertiary)]"
+                            />
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {(window as any).pywebview && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    const filepath = await (window as any).pywebview.api.open_file_dialog();
+                                    if (filepath && filepath.length > 0) {
+                                      const path = Array.isArray(filepath) ? filepath[0] : filepath;
+                                      setNewCustomLocalPath(path);
+                                    }
+                                  } catch (e) {
+                                    console.error("Failed to open file dialog", e);
+                                  }
+                                }}
+                                disabled={isDisabled}
+                                className="px-4 py-2 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 text-[var(--foreground)] text-sm font-medium rounded-lg border border-[var(--glass-border)] transition-colors whitespace-nowrap"
+                              >
+                                Browse...
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="pt-4">
+                          <button
+                            onClick={() => {
+                              if (newCustomLocalName && newCustomLocalPath) {
+                                const newModel = {
+                                  id: Math.random().toString(36).substring(7),
+                                  name: newCustomLocalName,
+                                  path: newCustomLocalPath
+                                };
+                                onSettingsChange({
+                                  customLocalModels: [...(settings.customLocalModels || []), newModel],
+                                  chatModel: newCustomLocalPath
+                                });
+                                setIsAddingCustomLocal(false);
+                                setNewCustomLocalName('');
+                                setNewCustomLocalPath('');
+                              }
+                            }}
+                            disabled={isDisabled || !newCustomLocalName || !newCustomLocalPath}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                          >
+                            <Check size={16} /> Save & Select Model
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {(!settings.externalModels || settings.externalModels.length === 0 || isAddingModel) ? (
@@ -456,12 +648,6 @@ export function SettingsScreen({
         </div>
       </div>
       
-      <ModelManager
-        isOpen={isModelManagerOpen}
-        onClose={() => setIsModelManagerOpen(false)}
-        currentModel={settings.model}
-        currentChatModel={settings.chatModel}
-      />
     </>
   );
 }

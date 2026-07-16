@@ -182,22 +182,13 @@ class Database:
     ) -> int:
         conn = sqlite3.connect(self.db_path)
         now = datetime.now().isoformat()
-        existing = conn.execute(
-            "SELECT id FROM chat_sessions WHERE session_id = ?", (session_id,)
-        ).fetchone()
-
-        if existing:
-            conn.execute(
-                "UPDATE chat_sessions SET messages = ?, updated_at = ? WHERE id = ?",
-                (json.dumps(messages), now, existing[0]),
-            )
-            chat_id = existing[0]
-        else:
-            cursor = conn.execute(
-                "INSERT INTO chat_sessions (session_id, chat_model, messages, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-                (session_id, chat_model, json.dumps(messages), now, now),
-            )
-            chat_id = cursor.lastrowid
+        
+        # Insert a new record for every chat interaction so we don't overwrite history
+        cursor = conn.execute(
+            "INSERT INTO chat_sessions (session_id, chat_model, messages, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (session_id, chat_model, json.dumps(messages), now, now),
+        )
+        chat_id = cursor.lastrowid
         conn.commit()
         conn.close()
         return chat_id

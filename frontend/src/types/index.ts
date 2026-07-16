@@ -18,6 +18,12 @@ export interface ExternalModelConfig {
   baseUrl?: string;
 }
 
+export interface CustomLocalModel {
+  id: string;
+  name: string;
+  path: string;
+}
+
 export interface Settings {
   model: string;
   chatModel: string;
@@ -27,4 +33,5 @@ export interface Settings {
   chatProvider: 'local' | 'external';
   externalModels: ExternalModelConfig[];
   selectedExternalModelId: string | null;
+  customLocalModels?: CustomLocalModel[];
 }

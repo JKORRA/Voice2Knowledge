@@ -17,6 +17,7 @@ const WHISPER_MODELS = [
 ];
 
 const LLM_MODELS = [
+  { value: 'skip', label: 'Skip AI Download', status: 'API / Custom', description: 'I will use an API Key or Custom Model' },
   { value: 'qwen3.5-2b', label: 'Qwen 3.5 2B', status: '~3GB RAM', description: 'Best for standard laptops' },
   { value: 'qwen3.5-4b', label: 'Qwen 3.5 4B', status: '~5GB RAM', description: 'Strong reasoning, requires good RAM' },
   { value: 'qwen3.5-9b', label: 'Qwen 3.5 9B', status: '~10GB RAM', description: 'Premium logic, for high-end machines' },
@@ -62,10 +63,12 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
           setWhisperProgress(100);
           setLlmProgress(100);
           
-          useChatStore.getState().setSettings({
-            model: whisperModel,
-            chatModel: llmModel
-          });
+          const newSettings: any = { model: whisperModel };
+          if (llmModel !== 'skip') {
+            newSettings.chatModel = llmModel;
+            newSettings.chatProvider = 'local';
+          }
+          useChatStore.getState().setSettings(newSettings);
           
           setTimeout(() => {
             onComplete();
@@ -180,13 +183,13 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
               <div className="glass-panel bg-black/5 dark:bg-white/5 p-4 rounded-2xl flex flex-col gap-3">
                 <div className="flex justify-between text-sm font-semibold">
                   <span className="text-[var(--foreground)]">AI Assistant</span>
-                  <span className="text-[var(--accent)] font-mono">{llmDone ? 'Complete' : `${llmProgress}%`}</span>
+                  <span className="text-[var(--accent)] font-mono">{llmModel === 'skip' ? 'Skipped' : (llmDone ? 'Complete' : `${llmProgress}%`)}</span>
                 </div>
                 <div className="h-2.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden shadow-inner">
                   <motion.div 
                     className="h-full bg-gradient-to-r from-[var(--accent-hover)] to-[var(--accent)] rounded-full"
                     initial={{ width: 0 }}
-                    animate={{ width: `${llmProgress}%` }}
+                    animate={{ width: llmModel === 'skip' ? '100%' : `${llmProgress}%` }}
                     transition={{ ease: "linear", duration: 0.2 }}
                   />
                 </div>

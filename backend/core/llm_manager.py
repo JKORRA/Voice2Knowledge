@@ -26,6 +26,11 @@ class LLMManager:
     def is_model_downloaded(self, model_id: str = None) -> bool:
         """Check if the GGUF model is cached."""
         model_id = model_id or self.current_model_id
+        
+        # Check for custom local file path
+        if model_id.endswith('.gguf') and Path(model_id).is_file():
+            return True
+            
         model_info = LLM_MODELS.get(model_id, LLM_MODELS["qwen3.5-2b"])
         repo_id = model_info["repo_id"]
         filename = model_info["filename"]
@@ -76,7 +81,10 @@ class LLMManager:
         from backend.core.gpu_utils import is_cuda_available
 
         # Force download/get path
-        model_path = hf_hub_download(repo_id=self.repo_id, filename=self.filename)
+        if self.current_model_id.endswith('.gguf') and Path(self.current_model_id).is_file():
+            model_path = self.current_model_id
+        else:
+            model_path = hf_hub_download(repo_id=self.repo_id, filename=self.filename)
         
         # Check for GPU
         n_gpu_layers = 0
@@ -123,9 +131,13 @@ class LLMManager:
                         pass
                 
                 self.current_model_id = chat_model
-                model_info = LLM_MODELS.get(chat_model, LLM_MODELS["qwen3.5-2b"])
-                self.repo_id = model_info["repo_id"]
-                self.filename = model_info["filename"]
+                if chat_model.endswith('.gguf') and Path(chat_model).is_file():
+                    self.repo_id = None
+                    self.filename = None
+                else:
+                    model_info = LLM_MODELS.get(chat_model, LLM_MODELS["qwen3.5-2b"])
+                    self.repo_id = model_info["repo_id"]
+                    self.filename = model_info["filename"]
 
             if self._model is None:
                 await asyncio.to_thread(self._load_model)
