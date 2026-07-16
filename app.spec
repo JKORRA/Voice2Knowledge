@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+import sys
 
 block_cipher = None
 
@@ -127,3 +128,11 @@ coll = COLLECT(
     upx_exclude=[],
     name='Voice2Knowledge',
 )
+
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        coll,
+        name='Voice2Knowledge.app',
+        icon=None,
+        bundle_identifier='com.voice2knowledge.app',
+    )
