@@ -6,11 +6,13 @@ https://github.com/user-attachments/assets/ffb2c052-54d6-44f2-bbdf-06e6d8e168ea
 
 ## Key Features
 - **Privacy First**: 100% offline, local processing by default. Your data is yours. Optional support for cloud APIs if desired.
-- **Premium UI/UX**: Beautiful, responsive glassmorphism interface with fluid animations and automatic Light/Dark mode syncing.
-- **Advanced AI Memory**: Features a ChatGPT-style Token-Aware Dynamic Memory system. It mathematically balances context limits to remember dozens of previous chat messages seamlessly without crashing.
+- **Premium UI/UX**: Beautiful, responsive glassmorphism interface with fluid animations, inline model management, and automatic Light/Dark mode syncing.
+- **Advanced AI Memory**: Features a ChatGPT-style Token-Aware Dynamic Memory system. It mathematically balances context limits (up to 8192 tokens) to remember dozens of previous chat messages seamlessly without crashing.
+- **Bring Your Own Local Models**: Easily link any `.gguf` file on your hard drive to use as your local chat assistant without copying files.
 - **Bring Your Own API**: Save and manage multiple external AI providers (OpenAI, Anthropic, Gemini, Groq) via a built-in `litellm` integration.
 - **Automatic RAG Engine**: Uses a pure-Python TF-IDF engine to instantly chunk and retrieve the most relevant pieces of your transcriptions based on your questions. No manual context selection required!
 - **Automated Contextual Titles**: Generates concise, context-aware session titles completely in the background without interrupting your workflow.
+- **Reliable Persistence**: All settings, custom model shortcuts, and chat histories are saved to a robust backend JSON/SQLite storage, ensuring your data easily survives desktop app restarts.
 - **Rich Markdown Rendering**: Chat interface natively supports and styles Markdown, beautifully rendering code blocks, emphasis, and structured lists.
 - **GPU Acceleration**: Auto-detects NVIDIA GPUs (via `ctranslate2` & `nvidia-smi`) for lightning-fast transcription, or gracefully falls back to CPU processing.
 - **History & Export**: Saves all your sessions. Export your transcriptions to TXT, PDF, or DOCX.
@@ -86,21 +88,24 @@ After transcribing audio, you can ask questions about the content. The LLM runs 
 
 ### Available Models
 
-All models are downloaded on demand when first selected. Switch anytime in **Settings** → Manage Local Models.
+All built-in models are downloaded on demand when first selected. You can also easily add your own models. Delete any built-in or custom models effortlessly via the inline trash icons right next to the selection dropdowns in Settings.
 
-**Whisper** (transcription, via faster-whisper):
+**Transcription** (via faster-whisper):
 | Size | Default |
 |------|---------|
 | `tiny` | ✅ Default |
 | `base`, `small` | |
 | `medium`, `large-v3` | |
 
-**LLM** (chat, via llama.cpp — all GGUF format):
-| Model | Size | Default |
+**Chat Assistant** (via llama.cpp — GGUF format):
+| Built-in Model | Size | Default |
 |-------|------|---------|
 | Qwen 3.5 2B (Q4_K_M) | ~1.2 GB | ✅ Default |
 | Qwen 3.5 4B (Q4_K_M) | ~2.4 GB | |
 | Qwen 3.5 9B (Q4_K_M) | ~5.3 GB | |
+
+**Custom Local Models**:
+You are not limited to the built-in options! In **Settings**, you can select "Add Custom Local Model" and provide the absolute path to any `.gguf` file on your computer via a native file picker. Voice2Knowledge will save a shortcut to it, allowing you to seamlessly switch to your favorite local models without repeatedly typing paths or copying large files into the app directory.
 
 **External API Providers** (via LiteLLM):
 If you prefer not to use your local hardware for chat, you can configure external providers in **Settings → External API**.
