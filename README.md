@@ -1,6 +1,6 @@
 # Voice2Knowledge
 
-A premium, privacy-first local audio transcription and AI assistant. All processing happens entirely on your device — your audio and conversations never leave your machine. Transcribe files and chat naturally with a fully local LLM that intelligently remembers your conversations and references your transcriptions.
+A privacy-first local audio transcription and AI assistant. All processing happens entirely on your device, your audio and conversations never leave your machine. Transcribe files and chat naturally with a fully local LLM that intelligently remembers your conversations and references your transcriptions.
 
 https://github.com/user-attachments/assets/ffb2c052-54d6-44f2-bbdf-06e6d8e168ea
 
@@ -170,14 +170,6 @@ Voice2Knowledge/
 # Windows
 build.bat
 ```
-
----
-
-## Troubleshooting
-
-- **GPU not detected**: Falls back to CPU automatically, works fine but slower.
-- **Port 8000 in use**: Change port: `python -m uvicorn backend.main:app --port 9000`
-- **Model download slow**: First run downloads models (~1-2GB). Subsequent runs are instant.
 
 ---
 
